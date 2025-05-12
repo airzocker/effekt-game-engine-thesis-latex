@@ -1,0 +1,108 @@
+\documentclass[12pt,a4paper,twoside,openright]{report}
+\let\openright=\cleardoublepage
+
+% Go here and change your thesis metadata!
+\input{metadata}
+
+\usepackage[ngerman,english,shorthands=off]{babel}
+
+%%% Font
+\usepackage{lmodern}
+\usepackage[mono=false]{libertinus}
+% If you want the "classic" LaTeX feel, simply comment out the line above.
+
+%%% Packages
+% Useful "basic" packages
+\usepackage{microtype}
+\usepackage{amsmath,amsfonts,amsthm,bm}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{floatrow}
+\usepackage{array}
+\usepackage{hyperref}
+
+%%% Bibliography
+\usepackage[natbib,style=numeric,sorting=none]{biblatex}
+% Alternative with alphanumeric citations:
+%\usepackage[natbib,style=alphabetic]{biblatex}
+% Alternatives that conform to ISO690:
+%\usepackage[natbib,style=iso-numeric,sorting=none]{biblatex}
+%\usepackage[natbib,style=iso-alphabetic]{biblatex}
+
+% Load bibliography entries
+\addbibresource{bibliography.bib}
+
+% TikZ (feel free to remove this if you don't need it)
+\usepackage{tikz}
+\usetikzlibrary{graphs,positioning} % add tikz libraries as needed
+
+% Verbatim environments (feel free to remove this if you don't need it)
+\usepackage{fancyvrb}
+
+% Pseudocode (feel free to remove this if you don't need it)
+\usepackage{algpseudocode}
+\usepackage{algorithm}
+
+% Source code (feel free to remove this if you don't need it)
+\usepackage{listings}
+
+% Type rules (feel free to remove this if you don't need it)
+\usepackage{mathpartir}
+
+% Set up PDF details
+\hypersetup{pdftitle={\ThesisTitlePDF}}
+\hypersetup{pdfauthor={\ThesisAuthorPDF}}
+\hypersetup{unicode}
+\hypersetup{breaklinks=true}
+
+\usepackage[noabbrev]{cleveref}
+
+\input{todos} % remove this before compiling the final version!
+\input{macros} % use this file for various custom definitions
+
+\begin{document}
+
+\include{title}
+
+\include{intro}
+
+\include{ch1}
+\include{ch2}
+\include{ch3}
+
+\include{conclusion}
+\include{bibliography}
+
+\appendix
+\include{howto}
+
+\openright
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Selbstständigkeitserklärung
+%%%
+%%% Beware: the exact wording changes often.
+%%% Be sure to double-check official resources before submitting your thesis!
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\thispagestyle{empty}
+\begin{otherlanguage}{ngerman}
+\section*{Selbstständigkeitserklärung}
+
+Hiermit erkläre ich, dass ich diese schriftliche Abschlussarbeit selbständig verfasst habe, 
+keine anderen als die angegebenen Hilfsmittel und Quellen benutzt habe und alle wörtlich oder sinngemäß aus anderen Werken 
+übernommenen Aussagen als solche gekennzeichnet habe, 
+dass die Arbeit weder vollständig noch in wesentlichen Teilen Gegenstand eines anderen Prüfungsverfahrens gewesen ist, 
+dass ich die Arbeit weder vollständig noch in wesentlichen Teilen bereits veröffentlicht habe, 
+dass das in Dateiform eingereichte Exemplar mit dem eingereichten gebundenen Exemplar übereinstimmt.
+
+\vspace{1cm}
+\noindent
+\hrulefill \hspace{2.5cm} \hrulefill
+
+\noindent
+Ort, Datum \hfill Unterschrift
+\end{otherlanguage}
+
+\end{document}
