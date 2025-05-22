@@ -1,6 +1,44 @@
-\chapter{Results and discussion}
+\chapter{My ECS implementation}\label{chap:ecs}
 
-\begin{enumerate}
-\item Describe what the engine can currently do and talk about the Snake game so far made with it.
-\item Outlook: What could be done to the engine next, what needs compiler fixes to make it work more stable/longer? Explain how it could serve as a future benchmark for the Effekt language.
-\end{enumerate}
+\section{General differences}
+
+Comparing to existing ECS implementations, my version is an archetype based ECS and does not use chunks to store components of the same archetype. It uses effects to model all of the different parts a complete ECS needs, building up from simple ones.
+
+My ECS uses a \textit{Component} effect to model the component storage of all instances of a single component type. Each entity then has a (potentially different) component index for each of its components. Details about this system are explained in the Section `Components'. This results in an often non-sequential iteration of components during runtime, which is not very efficient at memory access, but that should not make a very big difference on the `js-web' target, as I will discuss in more detail in Chapter 6 (Discussion).
+
+Component queries are also implemented differently to most other ECSs, as I have a \textit{Query} effect that the engine user can create a new handler definition of, and then add different components and filters to it. When a component (including optional ones) is added to the query, a new definition of the textit{CompIter} effect handler is given to the user. Inside a system, the user can then call the query iteration function on the \textit{Query} handler, and inside the loop get or set the current component from each of the \textit{CompIter} handlers with the respective \textit{get} and \textit{set} interface functions. This is explained in more detail and with examples in the Section `Queries'.
+
+\section{World and engine}
+
+\begin{listing}
+\begin{lstlisting}
+// Define a useful component
+record Health(value: Int)
+(...)
+def main() = {
+	// Setup
+	with engineWorld();
+	with canvasRenderer();
+	// Register the component type
+	with component[Health]();
+	(...)
+}
+\end{lstlisting}
+\caption{Example component}
+\label{lst:ex-setup-component}
+\end{listing}
+
+To use the ECS at all, the \textit{World} effect must first be handled. My engine has some additional code around the ECS that creates basic resources and systems every game needs. Using this `engineWorld' function to initialize the engine also automatically creates a \textit{World} effect handler first. If those resources and systems should not be needed, the `world' function can be used directly. Additionally, any needed modules can be initialized/added after handling a \textit{World} by calling their initialization functions. One of these modules is the `canvasRenderer' that is currently needed for any graphical game. An example of how to initialize the `engineWorld' and `canvasRenderer' can be seen at the start of the `main' function in \cref{lst:ex-setup-component}.
+
+The \textit{World} effect is used to hold all systems and run them in order. As it also represents the base structure of my ECS, the `world' function, which handles the \textit{World} effect also handles all of the internal effects that are needed by the ECS. This includes the `componentManager', `archManager', `entityIdManager', `entityManager' and a resource that can be toggled to exit the game loop inside of the world. Most of these are explained more thoroughly in Chapter 4 (Engine implementation details and problems).
+
+After a \textit{World} exists, any modules and game code can be added to it by creating queries and adding systems using those to the \textit{World}. Some basic resources and systems get created by the `engineWorld' function, which include `Time', `TimeScale' and their update system. It also resets the per-frame keyboard inputs from the \textit{ffi} and exits the game loop on pressing the escape key. Other modules like the `canvasRenderer' add their components, resources and systems in a similar way. The game code by the game developer does the same as well after initialization; Creating components, resources and adding systems to the \textit{World} using queries.
+
+\section{Components}
+
+The \textit{Component} effect defines a component storage for the engine internals to store, get and set components of any single type. A handler for any type of components can be created with the `component' function. Using this in a game to `register' a component type can be seen in \cref{lst:ex-setup-component}.
+
+A component handler creates a dynamic (resizable) array, containing all the values of that component without any empty indices. To access a component value (get or set), a component index is used. When a new component is added, it is pushed at the end of the array. Removing an index works by swapping that value with the last one and popping that last index from the array. This returns the index that was at the end before, so the surrounding/calling code can update the component index of that entity to point to the newly swapped index.
+
+The engine internals use the component stores of each component type to store all of those values, without separating them by archetype. This way, iteration is usually not in order, but it reduces complexity and indirection. Any component value can be easily accessed by using the specific `Component' effect and a component index.
+
