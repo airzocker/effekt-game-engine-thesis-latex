@@ -1,1 +1,7 @@
 \chapter{Engine implementation details and problems}\label{chap:details}
+
+\section{Components implementation}
+
+A component handler creates a dynamic (resizable) array, containing all the values of that component without any empty indices. To access a component value (get or set), a component index is used. When a new component is added, it is pushed at the end of the array. Removing an index works by swapping that value with the last one and popping that last index from the array. This returns the index that was at the end before, so the surrounding/calling code can update the component index of that entity to point to the newly swapped index.
+
+The engine internals use the component stores of each component type to store all of those values, without separating them by archetype. This way, iteration is usually not in order, but it reduces complexity and indirection. Any component value can be easily accessed by using the specific \textit{Component} effect and a component index.
