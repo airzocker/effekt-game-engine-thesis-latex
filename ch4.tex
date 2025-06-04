@@ -6,6 +6,32 @@ A \textit{Component} handler creates a dynamic (resizable) array, containing all
 
 The engine internals use the component stores of each component type to store all of those values, without separating them by archetype. This way, iteration is usually not in order, but it reduces complexity and indirection. Any component value can be easily accessed by using the specific \textit{Component} effect and a component index.
 
-When trying to destroy an entity with multiple components, a major issue occurs. Using the previously mentioned way to remove a component by using the index requires the \textit{Component} effect to be handled, which would need to be done for any component the entity currently has. As I strongly wanted dynamic entities, meaning any (single) component can be added or removed from an entity, the components cannot be stored as part of its static generic type. This means, the destroy entity function cannot work by using the \textit{Component} effects of all components the entity has, as that changes dynamically at runtime.
+When trying to destroy an entity with multiple components, a major issue occurs. Using the previously mentioned way to remove a component by using the index requires the \textit{Component} effect to be handled, which would need to be done for any component the entity currently has. As I strongly wanted dynamic entities, meaning any (single) component can be added or removed from an entity dynamically, the component types cannot be stored as part of the type of a component group. This means, the destroy entity function cannot work by using the \textit{Component} effects of all components the entity has, as that changes dynamically at runtime.
 
 The solution for this component removal problem is using existential types and a \textit{ComponentManager}. On every component "register" using the `component' function, the \textit{ComponentManager} needs to be handled, which automatically happens when using the `world' or `engineWorld' setup functions. When a component then creates its component storage variable, it also registers it with the \textit{ComponentManager}, which gives every component type a unique index. It also stores that component storage in an array itself, wrapped in an existential type, making the type signature independed of the actual component type. When later needing to remove a component, the \textit{ComponentManager} can then be used, together with a component id and index. Inside of that remove function, the correct component storage is retrieved from an array using the id and matched on. Inside the match, that index can be removed and swapped with the last one by using the power of existential types, knowing the type of its component storage inside the removal block, without showing it in its type signature. This way, entities can be destroyed without needing to have any \textit{Component} effect handled.
+
+\section{Archetypes and the ArchManager implementation}
+
+The ECS needs to manage what entities have what components. As my ECS is archetype based, my \textit{ArchManager} effect takes that role. Archetypes define a specific set of component types, so every entity belongs to an archetype and many entities can and should belong to the same archetype. When a component is added or removed from an entity, its archetype changes. The \textit{ArchManager} manages these and stores which entity belongs to which archetype. It creates an archetype whenever an entity gets a component removed or added while its new archetype is not yet present and removes archetypes that no entity belongs to anymore.
+
+My \textit{ArchManager} effect acts as the bridge between the \textit{EntityManager} and the actual component values. It has functions to check if a component type is present on a specific entity, create and destroy entities, as well as remove a component from an entity and add/set or get the value of a component. In its handler, a resizable array is created to hold all \textit{Arch} values, each representing one archetype. Each of those has a map from a component id to a resizable array, which contain all the component indices for the specific component type. Each of these is for one of the entities belonging to this archetype, in the same order as an additional resizable array in the \textit{Arch} containing all the actual \textit{Entity} values for iteration.
+
+\section{EntityManager implementation and its API}
+
+`Structural changes' is a term often used in ECSs to define changes that do more to the world than modify component values. They include entity creation/destruction, adding not yet present components or removing components. To summarize, `structural changes' are modifications to the world, that may lead to queries needing to recalculate their matches.
+
+Most of the API (interaction from the game developer side) to structurally modify entities and components in the world is through the \textit{EntityManager} effect. It has functions to check if an entity exists or if it has a specific component type. It can also create and destroy entities, remove components and add/set or get component values.
+
+The \textit{EntityManager} effect has a second handler implementation that is active inside of system bodies. They handle deferred modification, so that there is no structural modification of the queried component/entity arrays that get iterated over during modification. It forwards calls that can be executed directly to the surrounding normal \textit{EntityManager} while queuing commands that should be executed after the system, like creating entities and adding to or removing components from them. Newly created entities get reserved without yet being created, so a valid (after the system body) \textit{Entity} value can be returned that can also be used to add components to the new entity.
+
+\section{System implementation}
+
+A \textit{System} represents a single function or code block that gets executed once every frame of the game. When using the `system' function to add a system to the world, it creates a new \textit{System} effect handler around the currently existing one, which first calls the body of the existing system and then its own body. This way, nested \textit{System} handlers can be used to create a sequential chain of systems that get called in order or definition from the single step function the effect defines.
+
+\section{Query implementation}
+
+
+
+\section{World implementation and frame execution schedule}
+
+
