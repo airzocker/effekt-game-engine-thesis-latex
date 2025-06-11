@@ -26,6 +26,8 @@ Most of the API (interaction from the game developer side) to structurally modif
 
 The \textit{EntityManager} effect has a second handler implementation that is active inside of system bodies. They handle deferred modification, so that there is no structural modification of the queried component/entity arrays that get iterated over during modification. It forwards calls that can be executed directly to the surrounding normal \textit{EntityManager} while queuing commands that should be executed after the system, like creating entities and adding to or removing components from them. Newly created entities get reserved without yet being created, so a valid (after the system body) \textit{Entity} value can be returned which can then be used to add components to the new entity.
 
+The \textit{EntityManager} effect uses bidirectional effects heavily, as many effects need to be dynamically available at the call site of functions instead of the handling site, which is at the start of the game code. Most \textit{EntityManager} functions use the \textit{Component[T]} and \textit{EcsException} effects at call site. This makes all the component types available that have been created (usually at the beginning), even after creating the world, including the \textit{EntityManager}. The \textit{EcsException} has functions for the error, that the given entity does not exist, as well as the specific component type not existing on the given entity, which can be handled for each function call separately, or the default `panic'ing handler can be used for the whole game.
+
 \section{System implementation}
 
 A \textit{System} represents a single function or code block that gets executed once every frame of the game. When using the `system' function to add a system to the world, it wraps the current \textit{System} effect handler with a new one, which first calls the body of the existing system and then its own body. This way, nested \textit{System} handlers can be used to create a sequential chain of systems that get called in order or definition from the single step function the effect defines.
@@ -36,8 +38,26 @@ A \textit{Query} effect handler in conjunction with \textit{CompIter} effect han
 
 To create a \textit{Query}, the `query' function can be used to define a named handler for the \textit{Query} effect. By calling `withC' or `withoutC' effect functions on the named handler, additional filters can be added that do not get iterated themselves. Using the `addC' or `addOptC' effect functions, named handlers of the \textit{CompIter} effect for the respective component can be defined. These can then be used during iteration to get and set the specific component value of that type of the current entity by calling the `get' or `set' effect functions. The \textit{Query} itself can be iterated by using the `foreach' function, which iterates over the current \textit{Entity} value.
 
+The \textit{Query} effect also heavily uses bidirectional effects, as the specific \textit{Component[T]} must be available at the call site when adding (optional) components or filters to the query.
+
 \section{World implementation and frame execution schedule}
 
 The \textit{World} effect represents the ECS world, but it does very little on its own, as most aspects making up a world are handled by their own effects. The `world' or `engineWorld' functions are mostly there to create all the needed effect handlers.
 
 Besides creating all the needed effect handlers in the `world' handler, it is responsible for stepping the world a single time with the `stepWorld' effect function or run it endlessly in a loop with the `runWorld' function. They both call the current \textit{System} handlers `step' effect function and in the `runWorld' case then `wait' for the next frame and give control flow back to the javascript event loop. It also registers the \textit{RunWorld} resource, which is used to exit the endless loop by checking its boolean value every frame.
+
+\section{Canvas renderer implementation}
+
+The `canvasRenderer' is the first and most important module built on top of the ECS to render simple 2D shapes using the HTML5 canvas API. It is essentially a function that adds a \textit{system} to the ECS \textit{World}, as well as handling additional \textit{Component}s and \textit{Resource}s, like any other module, including the game developer's code.
+
+The \textit{Shape} and \textit{DrawHeight} components, as well as the \textit{Camera} and \textit{WindowProperties} resources are created by the `canvasRenderer'. A \textit{Shape} and \textit{DrawHeight} component is needed on every entity that should be drawn, where the \textit{Shape} type defines the shape (circle, rect, text), as well as containing the color and for the text shape, the actual text string. The \textit{DrawHeight} defines the drawing order of all the entities, so higher values will be drawn in front of shapes with lower \textit{DrawHeight}. The \textit{Camera} resource defines the position, rotation and height of the camera. The height defines how many units/meters fit from the bottom to top of the rendered screen area, which could also be called zoom. The \textit{WindowPropiertes} resource are set by the `canvasRenderer' for the rest of the game logic to read from, if that is needed. It currently only holds the window size in pixels.
+
+The actual drawing happens by a \textit{System} that gets added to the world, which queries for \textit{Position}s, optional \textit{Rotation}s and \textit{Scale}s, as well as \textit{Shape}s and optional \textit{DrawHeight}s. It inserts all shapes into a binary min-\textit{Heap} based on their draw height, so they can be drawn from back to front using the `deleteMin' function from the heap. Before rendering, the canvas is first transformed to make its height exactly one unit/meter, after which the \textit{Camera}`s transform is applied, to make offset, rotate and zoom the canvas based on the \textit{Camera}`s parameters. For each shape, the current canvas transformation is then saved and restored after rendering it. The canvas is then transformed again based on the \textit{Shape}`s position, rotation and scale, after which the shape can always be drawn in the center with unit dimensions (size of one).
+
+Interfacing with the canvas is implemented by using the `ffi' (foreign function interface), where each function needed on the canvas having an `external' JavaScript definition. The canvas itself is also defined as an `extern type', to be able to pass it to the external functions.
+
+\section{Player input implementation}
+
+The player input is not handled in Effekt, only interfaced with the `ffi'. This could be changed with JavaScript to Effekt callbacks, but that would need further consideration. Also, it currently only supports keyboard input.
+
+The key events are captured and pushed into sets inside the external JavaScript implementation, which get reset every frame. With `ffi' functions, a specific key (by JavaScript KeyCode) can be checked for currently pressed, just pressed or just released this frame, from any Effekt code.
