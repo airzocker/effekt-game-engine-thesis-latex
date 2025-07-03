@@ -37,17 +37,6 @@
 % Customization of algorithmic environment (comment style)
 \renewcommand{\algorithmiccomment}[1]{\textcolor{black!25}{\dotfill\sffamily\itshape#1}}
 
-\floatname{listing}{Listing}
-\lstset{ % use this to define styling for any other language
-  language=C++,
-  tabsize=2,
-  showstringspaces=false,
-  basicstyle=\footnotesize\tt\color{black!75},
-  identifierstyle=\bfseries\color{black},
-  commentstyle=\color{green!50!black},
-  stringstyle=\color{red!50!black},
-  keywordstyle=\color{blue!75!black}}
-
 % Here's how you define a custom language, Effekt is used here as an example
 \lstdefinelanguage{Effekt}{
   morekeywords={%
@@ -65,4 +54,17 @@
   morestring=[b]"""
 }[keywords,comments,strings]
 
+\floatname{listing}{Listing}
+\lstset{ % use this to define styling for any other language
+  language=Effekt,
+  tabsize=2,
+  showstringspaces=false,
+  basicstyle=\footnotesize\tt\color{black!75},
+  identifierstyle=\bfseries\color{black},
+  commentstyle=\color{green!50!black},
+  stringstyle=\color{red!50!black},
+  keywordstyle=\color{blue!75!black}}
+
 \newcolumntype{P}[1]{>{\centering\arraybackslash}p{#1}}
+
+\lstMakeShortInline[columns=fixed]|

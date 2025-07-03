@@ -1,63 +1,188 @@
-\chapter{Engine implementation details and problems}\label{chap:details}
-
-All effect functions that are not supposed to be called by the game developer but are available, as the effect needs to be handled on the game developer side, have names prefixed with `internal...'. This is left out in the function names of the following implementation details when they are not contained in full code snippets, as it is irrelevant for the understanding and just a product of the Effekt language not having visibility modifiers (yet).
+\chapter{Engine and ECS implementation details}\label{chap:details}
 
 \section{Component implementation and existentials}
 
-A \textit{Component} handler creates a dynamic (resizable) array, containing all the values of that component without any empty indices. To access a component value (get or set), a component index is used. When a new component is added, it is pushed at the end of the array. Removing an index works by swapping that value with the last one and popping that last index from the array. This returns the index that was at the end before, so the surrounding/calling code can update the component index of that entity to point to the newly swapped index.
+\begin{lstlisting}[caption=Component signiture]
+interface Component[T] {
+  def getComponentId(): Int
+  def internalAddComponent(value: T): Int
+  def internalSetComponent(index: Int, value: T): Unit
+  def internalGetComponent(index: Int): T
+  def internalGetComponentStore(): ComponentStore[T]
+  def internalCreateSetComponentOp(
+    entity: Entity, value: T
+  ): SetComponentOp
+}
+\end{lstlisting}
 
-The engine internals use the component stores of each component type to store all of those values, without separating them by archetype. This way, iteration is usually not in order, but it reduces complexity and indirection. Any component value can be easily accessed by using the specific \textit{Component} effect and a component index.
+A |Component[T]| handler creates a dynamic (resizable) array, containing all the values of that component type without any empty indices. To access a component value (get or set), a component index is used. When a new component is added, it is pushed at the end of the array. Removing an index works by swapping that value with the last one and popping that last index from the array. This returns the index that was at the end before, so the surrounding/calling code can update the component index of that entity to point to the newly swapped index.
 
-When trying to destroy an entity with multiple components, a major issue occurs. Using the previously mentioned way to remove a component by using the index requires the \textit{Component} effect to be handled, which would need to be done for any component the entity currently has. As I strongly wanted dynamic entities, meaning any (single) component can be added or removed from an entity dynamically, the component types cannot be stored as part of the type of a component group. This means, the destroy entity function cannot work by using the \textit{Component} effects of all components the entity has, since that set changes dynamically at runtime.
+The engine internals use the component stores of each component type to store all of those values, without separating them by archetype. This way, iteration is usually not in order, but it reduces complexity and indirection. Any component value can be easily accessed by using the specific |Component[T]| effect and a component index.
 
-The solution for this component removal problem is using existential types and a \textit{ComponentManager}. On every component "register" using the `component' function, the \textit{ComponentManager} needs to be handled, which automatically happens when using the `world' or `engineWorld' setup functions. When a component then creates its component storage variable, it also registers it with the \textit{ComponentManager}, assigning every component type a unique index. It also stores that component storage in an array itself, wrapped in an existential type, making its signature independent of the actual component type. When later needing to remove a component, the \textit{ComponentManager} can then be used, together with a component id and index. Inside of that remove function, the correct component storage is retrieved from an array using the id and matched on. Inside the match, that index can be removed and swapped with the last one by using the power of existential types, knowing the type of its component storage inside the removal block, without showing it in its type signature. This way, entities can be destroyed without needing to have any \textit{Component} effect handled.
+When trying to destroy an entity with multiple components, a major issue occurs. Using the previously mentioned way to remove a component by using the index requires the |Component| effect to be handled, which would need to be done for any component the entity currently has. As dynamic entities were a high priority, meaning any (single) component can be added or removed from an entity dynamically, the component types cannot be stored as part of the type of a component group. This means, the destroy entity operation cannot work by using the |Component| effects of all components the entity has, since that set changes dynamically at runtime.
+
+\begin{lstlisting}[caption=ComponentManager signiture]
+interface ComponentManager {
+  def internalRegisterComponentStore[T](
+    componentStore: ComponentStore[T]
+  ): Int
+  def internalRemoveComponent(componentId: Int, index: Int): Unit
+}
+\end{lstlisting}
+
+The solution for this component removal problem is using existential types and a |ComponentManager|. To register any component using the |component| function, the |ComponentManager| needs to be handled, which automatically happens when using the |world| or |engineWorld| setup functions. When a component then creates its component storage variable, it also registers that with the |ComponentManager|, assigning every component type a unique index. It also stores that component storage in an array itself, wrapped in an existential type, making its signature independent of the actual contained component type. When later needing to remove a component, the |ComponentManager| can then be used, together with a component id and index. Inside of that remove operation, the correct component storage is retrieved from an array using the id and matched on. Inside the match, that index can be removed and swapped with the last index by using the power of existential types. This works, because the match case knows the type of its component storage, without showing it in its type signature. This way, entities can be destroyed without needing to have any |Component| effect handled at that point.
 
 \section{Archetypes and the ArchManager implementation}
 
-The ECS needs to manage what entities have what components. As my ECS is archetype based, my \textit{ArchManager} effect takes that role. Archetypes define a specific set of component types, so every entity belongs to an archetype and ideally many entities belong to the same archetype. When a component is added or removed from an entity, its archetype changes. The \textit{ArchManager} manages these and stores which entity belongs to which archetype. It creates an archetype whenever an entity gets a component removed or added while its new archetype is not yet present and removes archetypes that no entity belongs to anymore.
+\begin{lstlisting}[caption=ArchManager signiture]
+interface ArchManager {
+  def internalHasComponent(archId: Int, componentId: Int): Bool
+  def internalAddEntity(entity: Entity): EntityData
+  def internalRemoveSwapEntity(
+    entityData: EntityData
+  ): Option[Entity]
+  def internalGetComponent[T](
+    entityData: EntityData
+  ): Option[T] / Component[T]
+  def internalSetComponent[T](
+    entityData: EntityData, value: T,
+	componentId: Int, componentStore: ComponentStore[T]
+  ): Option[(EntityData, Option[Entity])]
+  def internalAddExistingComponent(
+    entityData: EntityData, componentId: Int, componentIndex: Int
+  ): (EntityData, Option[Entity])
+  def internalRemoveComponent(
+    entityData: EntityData, componentId: Int
+  ): (EntityData, Option[Entity])
+  def internalIterEntitiesArchIdsEntityIndices(
+    archIds: ResizableArray[Int], iterAll: Bool
+  ) { prog: => Unit / read[(Entity, Int, Int)] }: Unit / stop
+  def internalGetComponentIndices(
+    archId: Int, componentId: Int
+  ): Option[ResizableArray[Int]]
+  def internalGetQueryArchIds(
+    withIds: Map[Int, Unit], withoutIds: Map[Int, Unit],
+	lastChangeVersion: Int
+  ): Option[(ResizableArray[Int], Int)]
+}
+\end{lstlisting}
 
-My \textit{ArchManager} effect acts as the bridge between the \textit{EntityManager} and the actual component values. It has functions to check if a component type is present on a specific entity, create and destroy entities, as well as remove a component from an entity and add/set or get the value of a component. In its handler, a resizable array is created to hold all \textit{Arch} values, each representing one archetype. Each of those has a map from a component id to a resizable array, which contain all the component indices for the specific component type. Each of these is for one of the entities belonging to this archetype, aligned with a parallel resizable array in the \textit{Arch} containing the actual \textit{Entity} values for iteration.
+The ECS needs to manage what entities have what components. As it is archetype based, the |ArchManager| effect takes that role. Archetypes define a specific set of component types, so every entity belongs to an archetype and ideally many entities belong to the same archetype. When a component is added or removed from an entity, the entity`s archetype changes. The |ArchManager| manages these and stores which entity belongs to which archetype. It creates an archetype whenever an entity gets a component removed or added while its new archetype is not yet present and removes archetypes that no entity belongs to anymore.
+
+The |ArchManager| effect acts as the bridge between the |EntityManager| and the actual component values. It has operations to check if a component type is present on a specific entity index, create and destroy entities indices, as well as remove a component from an entity index and add/set or get the value of a component. In its handler, a resizable array is created to hold all |Arch| values, each representing one archetype. Each of those has a map from a component id to a resizable array, which contain all the component indices for the specific component type. Each of these is for one of the entities belonging to this archetype, aligned with a parallel resizable array in the |Arch| containing the actual |Entity| values for iteration.
 
 \section{EntityManager implementation and its API}
 
-`Structural changes' is a term often used in ECSs to define changes that do more to the world than modify component values. They include entity creation/destruction, adding not yet present components or removing components. To summarize: `structural changes' are modifications to the world, that may lead to queries needing to recalculate their matches.
+\textit{Structural changes} is a term often used in ECSs to define changes that do more to the world than modify component values. They include entity creation/destruction, adding not yet present components or removing components. To summarize: Structural changes are modifications to the world, that may lead to queries needing to recalculate their matches.
 
-Most of the API (interaction from the game developer side) to structurally modify entities and components in the world is through the \textit{EntityManager} effect. It has functions to check if an entity exists or if it has a specific component type. It can also create and destroy entities, remove components and add/set or get component values.
+Most of the API (interaction from the game developer side) to structurally modify entities and components in the world happens through the |EntityManager| effect. It has operations to check if an entity exists or if it has a specific component type. It can also create and destroy entities, remove components and add/set or get component values.
 
-The \textit{EntityManager} effect has a second handler implementation that is active inside of system bodies. They handle deferred modification, so that there is no structural modification of the queried component/entity arrays that get iterated over during modification. It forwards calls that can be executed directly to the surrounding normal \textit{EntityManager} while queuing commands that should be executed after the system, like creating entities and adding to or removing components from them. Newly created entities get reserved without yet being created, so a valid (after the system body) \textit{Entity} value can be returned which can then be used to add components to the new entity.
+\begin{lstlisting}[caption=EntityManager signiture]
+interface EntityManager {
+  def hasEntity(entity: Entity): Bool
+  def hasComponent[T](
+    entity: Entity
+  ): Bool / { Component[T], EcsException }
+  def getEntityData(entity: Entity): EntityData / EcsException
+  def createEntity(): Entity
+  def destroyEntity(entity: Entity): Unit / EcsException
+  def removeComponent[T](
+    entity: Entity
+  ): Unit / { Component[T], EcsException }
+  def getComponent[T](
+    entity: Entity
+  ): T / { Component[T], EcsException }
+  def setComponent[T](
+    entity: Entity, value: T
+  ): Unit / { Component[T], EcsException }
+  def internalGetEntityDatas(): OptionArray[(Entity, EntityData)]
+}
+\end{lstlisting}
 
-The \textit{EntityManager} effect uses bidirectional effects heavily, as many effects need to be dynamically available at the call site of functions instead of the handling site, which is at the start of the game code. Most \textit{EntityManager} functions use the \textit{Component[T]} and \textit{EcsException} effects at call site. This makes all the component types available that have been created (usually at the beginning), even after creating the world, including the \textit{EntityManager}. The \textit{EcsException} has functions for the error, that the given entity does not exist, as well as the specific component type not existing on the given entity, which can be handled for each function call separately, or the default `panic'ing handler can be used for the whole game.
+The |EntityManager| effect has a second handler implementation that is active inside of system bodies. They handle deferred modification, so that there is no structural modification of the queried component/entity arrays that get iterated over during modification. It forwards calls that can be executed directly to the surrounding normal |EntityManager| while queuing commands that should be executed after the system, like creating entities and adding to or removing components from them. Newly created entities get reserved without yet being created, so a valid (after the system body) |Entity| value can be returned which can then be used to add components to the new entity.
+
+The |EntityManager| effect uses bidirectional effects heavily, as many effects need to be dynamically available at the call site of effect operations instead of the handling site, which is mostly at the start of the game code. Most |EntityManager| operations use the |Component[T]| and |EcsException| effects at call site. This makes all the component types available that have been registered at that point, even after creating the world. The |EcsException| has operationss for an error, that the given entity does not exist, as well as the specific component type not existing on the given entity, which can be handled for each operation call separately, or the default |panic|ing handler can be used for the whole game.
 
 \section{System implementation}
 
-A \textit{System} represents a single function or code block that gets executed once every frame of the game. When using the `system' function to add a system to the world, it wraps the current \textit{System} effect handler with a new one, which first calls the body of the existing system and then its own body. This way, nested \textit{System} handlers can be used to create a sequential chain of systems that get called in order or definition from the single step function the effect defines.
+\begin{lstlisting}[caption=System signiture]
+interface System {
+  def internalStep(): Unit / EntityManager
+}
+\end{lstlisting}
+
+A |System| represents a single function or code block that gets executed once every frame of the game. When using the |system| function to add a system to the world, it wraps the current |System| effect handler with a new one, which first calls the body of the existing system and then its own body. This way, nested |System| handlers can be used to create a sequential chain of systems in the order they were added. This whole chain can then get called from the single |step| operation the |System| effect defines.
 
 \section{Query implementation}
 
-A \textit{Query} effect handler in conjunction with \textit{CompIter} effect handlers can be used to iterate over specific sets of components and their respective \textit{Entity}. This works everywhere the \textit{World} and its requirements are handled, but is mostly used inside systems. Iterating optional components and adding additional filters to require or exclude entities with specific components are also possible with my \textit{Query} implementation.
+\begin{lstlisting}[caption=Query and CompIter signitures]
+interface Query {
+  def addC[T]() {
+    prog: { iter: CompIter[T] } => Unit
+  }: Unit / Component[T]
+  def addOptC[T]() {
+    prog: { iter: CompIter[Option[T]] } => Unit
+  }: Unit / Component[T]
+  def withC[T](): Unit / Component[T]
+  def withoutC[T](): Unit / Component[T]
+  def foreach() { action: Entity => Unit }: Unit
+}
 
-To create a \textit{Query}, the `query' function can be used to define a named handler for the \textit{Query} effect. By calling `withC' or `withoutC' effect functions on the named handler, additional filters can be added that do not get iterated themselves. Using the `addC' or `addOptC' effect functions, named handlers of the \textit{CompIter} effect for the respective component can be defined. These can then be used during iteration to get and set the specific component value of that type of the current entity by calling the `get' or `set' effect functions. The \textit{Query} itself can be iterated by using the `foreach' function, which iterates over the current \textit{Entity} value.
+interface CompIter[T] {
+  def get(): T
+  def set(value: T): Unit
+}
+\end{lstlisting}
 
-The \textit{Query} effect also heavily uses bidirectional effects, as the specific \textit{Component[T]} must be available at the call site when adding (optional) components or filters to the query.
+A |Query| effect handler in conjunction with |CompIter| effect handlers can be used to iterate over specific sets of components and their respective |Entity|. This works everywhere the |World| and its requirements are handled, but is mostly used inside systems. Iterating optional components and adding additional filters to require or exclude entities with specific components are also possible with the |Query| implementation.
+
+To create a |Query|, the |query| function can be used to define a named handler for the |Query| effect. The |Query| itself can be iterated using the |foreach| operation, which iterates over the current |Entity| value. By calling the |withC| or |withoutC| effect operations on the named |Query| handler, additional filters can be added that do not get iterated themselves. Using the |addC| or |addOptC| effect operations, named handlers of the |CompIter| effect for the respective component can be defined. These can then be used during |Query| iteration to |get| and |set| the specific component value of that type of the current entity with the respective effect operations.
+
+The |Query| effect also heavily uses bidirectional effects, as the specific |Component[T]| effect must be available at the call site when adding (optional) components or filters to the query.
 
 \section{World implementation and frame execution schedule}
 
-The \textit{World} effect represents the ECS world, but it does very little on its own, as most aspects making up a world are handled by their own effects. The `world' or `engineWorld' functions are mostly there to create all the needed effect handlers.
+The |World| effect represents the ECS world, but it does very little on its own, as most aspects making up a world are handled by their own effects. The |world| or |engineWorld| functions are mostly there to create all the needed effect handlers.
 
-Besides creating all the needed effect handlers in the `world' handler, it is responsible for stepping the world a single time with the `stepWorld' effect function or run it endlessly in a loop with the `runWorld' function. They both call the current \textit{System} handlers `step' effect function and in the `runWorld' case then `wait' for the next frame and give control flow back to the javascript event loop. It also registers the \textit{RunWorld} resource, which is used to exit the endless loop by checking its boolean value every frame.
+\begin{lstlisting}[caption=World signiture]
+interface World {
+  def stepWorld(): Unit / System
+  def runWorld(): Unit / System
+}
+\end{lstlisting}
+
+Besides creating all the needed effect handlers in the |world| handler, the |World| effect is responsible for stepping the world a single time with the |stepWorld| effect operation or run it endlessly in a loop with the |runWorld| operation. They both call the current |System| handler`s |step| effect operation and in the |runWorld| case then |wait| for the next frame and give control flow back to the javascript event loop. The |world| handler also registers the |RunWorld| resource, which is used to exit the endless loop by checking its boolean value every frame.
 
 \section{Canvas renderer implementation}
 
-The `canvasRenderer' is the first and most important module built on top of the ECS to render simple 2D shapes using the HTML5 canvas API. It is essentially a function that adds a \textit{system} to the ECS \textit{World}, as well as handling additional \textit{Component}s and \textit{Resource}s, like any other module, including the game developer's code.
+The |canvasRenderer| is the first and most important module built on top of the ECS to render simple 2D shapes using the HTML5 canvas API. It is essentially a function that adds a |System| to the ECS |World|, as well as handling additional |Component|s and |Resource|s. This working prinicple is like any other module, including the game developer's actual game code.
 
-The \textit{Shape} and \textit{DrawHeight} components, as well as the \textit{Camera} and \textit{WindowProperties} resources are created by the `canvasRenderer'. A \textit{Shape} and \textit{DrawHeight} component is needed on every entity that should be drawn, where the \textit{Shape} type defines the shape (circle, rect, text), as well as containing the color and for the text shape, the actual text string. The \textit{DrawHeight} defines the drawing order of all the entities, so higher values will be drawn in front of shapes with lower \textit{DrawHeight}. The \textit{Camera} resource defines the position, rotation and height of the camera. The height defines how many units/meters fit from the bottom to top of the rendered screen area, which could also be called zoom. The \textit{WindowPropiertes} resource are set by the `canvasRenderer' for the rest of the game logic to read from, if that is needed. It currently only holds the window size in pixels.
+\begin{lstlisting}[caption=canvasRenderer signiture]
+def canvasRenderer() { prog: => Unit / {
+  // Provides (handles) resources:
+  Resource[Camera], Resource[WindowProperties],
+  // Provides (handles) components:
+  Component[Shape], Component[DrawHeight],
+  // Provieds (handles) System (needed when adding a System):
+  System
+} }: Unit / {
+  // Needs components to be handled:
+  Component[Position], Component[Rotation], Component[Scale],
+  // Always needed to be handled when adding a System:
+  System, EntityIdManager,
+  // Generally needed to interact with the ECS:
+  ComponentManager, ArchManager, EntityManager, World
+}
+\end{lstlisting}
 
-The actual drawing happens by a \textit{System} that gets added to the world, which queries for \textit{Position}s, optional \textit{Rotation}s and \textit{Scale}s, as well as \textit{Shape}s and optional \textit{DrawHeight}s. It inserts all shapes into a binary min-\textit{Heap} based on their draw height, so they can be drawn from back to front using the `deleteMin' function from the heap. Before rendering, the canvas is first transformed to make its height exactly one unit/meter, after which the \textit{Camera}`s transform is applied, to make offset, rotate and zoom the canvas based on the \textit{Camera}`s parameters. For each shape, the current canvas transformation is then saved and restored after rendering it. The canvas is then transformed again based on the \textit{Shape}`s position, rotation and scale, after which the shape can always be drawn in the center with unit dimensions (size of one).
+The |Camera| and |WindowProperties| resources, as well as the |Shape| and |DrawHeight| components are created by the |canvasRenderer|. A |Shape| and optional |DrawHeight| component is needed on every entity that should be drawn. The |Shape| type defines the shape (circle, rect, text), as well as containing the color and, for the text shape, the actual text string. The |DrawHeight| defines the drawing order of all the entities, meaning higher values will be drawn in front of shapes with a lower |DrawHeight|. The |Camera| resource defines the position, rotation and height of the camera. The height defines how many size units fit from the bottom to top of the rendered screen area, which could also be called zoom. The |WindowProperties| resource is set by the |canvasRenderer| for the rest of the game logic to read from, if that is needed. It currently only holds the window size in pixels.
 
-Interfacing with the canvas is implemented by using the `ffi' (foreign function interface), where each function needed on the canvas having an `external' JavaScript definition. The canvas itself is also defined as an `extern type', to be able to pass it to the external functions.
+The actual drawing happens inside a |System| that gets added to the world, which queries for |Position|s, optional |Rotation|s and |Scale|s, as well as |Shape|s and optional |DrawHeight|s. It inserts all shapes into a binary min-|Heap| based on their draw height, so they can be drawn from back to front using the |deleteMin| function from the heap. Before rendering, the canvas is first transformed to make its height exactly one size unit, after which the |Camera|`s transform is applied, to offset, rotate and zoom the canvas based on the |Camera|`s parameters. For each shape, the current canvas transformation is first saved. The canvas is then transformed again based on the |Shape|`s position, rotation and scale, after which the shape can always be drawn in the center with unit dimensions (size of one). After rendering a shape, the transform from before the shape, but after the camera transform is restored again.
+
+Interfacing with the canvas is implemented by using the \textit{ffi} (foreign function interface), where each function needed on the canvas has an |external| JavaScript definition. The canvas itself is also defined as an |extern type|, to be able to pass it to the external functions.
 
 \section{Player input implementation}
 
-The player input is not handled in Effekt, only interfaced with the `ffi'. This could be changed with JavaScript to Effekt callbacks, but that would need further consideration. Also, it currently only supports keyboard input.
+The player input is not handled in Effekt so far, only interfaced with the \textit{ffi}. This could be changed with JavaScript to Effekt callbacks, but that would need further consideration. Also, it currently only supports keyboard input, no mouse or gamepads.
 
-The key events are captured and pushed into sets inside the external JavaScript implementation, which get reset every frame. With `ffi' functions, a specific key (by JavaScript KeyCode) can be checked for currently pressed, just pressed or just released this frame, from any Effekt code.
+In the external javascript implementation, all key events are captured and pushed into sets, which get reset every frame. One set is for the keys that were pressed this frame and one for the released keys. A third set holds all keys that are currently held down, so these only get removed when the respective key release event is received. With \textit{ffi} functions any Effekt code can check a specific key (identified by JavaScript |KeyCode|) for currently being pressed, just pressed this frame or released this frame.
