@@ -1,1 +1,33 @@
 \chapter{Discussion}\label{chap:discussion}
+
+\section{Restricting API usage}
+
+Currently, the Effekt language does not provide visibility modifiers. It does offer modules, but we chose instead to prefix all function/operation names that should never be called from library user code with `internal'. Using an `internal' module would still allow the library user to call these, so modules would not be able to limit the API usage either.
+
+Apart from calling functions/operations with the `internal' prefix, there are still other ways to use the API that are not intended. One of these is to handle multiple |World|s, registering components multiple times or handling other ECS related effects manually. This does not break the program most of the time, but can be very confusing. For example a second world would be completely separate from the first one and used until it is out of scope, but the first world will not change while a second one is handled. Registering a component for the second time will give it another type id, which will then be used until that |Component| effect is out of scope. This second handler of the component however, will not use the same storage as the first and archetypes using the second |Component| handler will be different from ones using the first.
+
+The last major unintended API usage posibility comes from the simple fact that an effect operation can be wrapped in a local function where the effect is handled. This allows the function to not require that effect anymore, while still using the handler from the definition site directly. As explained earlier, deferred modification inside systems is made possible by handling an alternative |EntityManager| implementation (|systemEntityManager|) inside every system body to avoid infinite iteration and more. This can be circumvented by creating a function that captures the |createEntity| effect operation from outside a system using the normal |EntityManager|, but then calling that function inside a system, where it is now independent from the local deferred |EntityManager|.
+
+The first issue can be fixed as soon as a proper system for visibility/access restriction is implemented in Effekt. The second issue of capturing an effect operation in a function can not be solved with the current concept of the Effekt language, as this builds on top of some of the core concepts of Effekt. For this, a complicated workaround would be needed to prevent this, or the library simple needs to specify that this is not allowed.
+
+\section{Query API and drawbacks}
+
+The initial plans for our query API was to specify the components and filters as generic types on query creation/handling and then iterate all the components via the query, not just the entity values themselfs. This turned out to not be feasable with the way the effect systems works. The current query API is quite verbose, including significant amounts of boilerplate code, but accomplishes the requirements in an easy to understand form. While easy to understand, the named handler syntax can need some getting used to.
+
+The queries in general also are not perfect yet, as they completely recalculate their matches before the next iteration whenever any structural change was made. This means adding a component to one single entity makes all queries recalculate for the next frame. The recalculation is compromised of checking all archetypes wether they include all required components but none of the `without' filter components and creating an array for these matching archetype indices. This very conservative approach can be improved in multiple ways, as mentioned in the `Future work' section.
+
+\section{Optimization and indirect component access}
+
+Many ECS libraries choose to store all values of a component type in separate arrays per archetype, while some even split these up into chunks of a specific size and memory alignement (often 16 kB). In both cases, many of the components that are iterated sequentially are also stored next to each other. This makes them very cache friendly and generally fast to iterate.
+
+Our ECS uses a single dynamic array to densly store \textit{all} values of one component type and each archetype stores an additional array with indices into the component array for every entity of that archetype. This leads to one more indirection while iterating and non-sequental access of component values. While most production-ready or performance-focused ECS libraries would be significantly impacted by this, our library is for research and testing purposes. On one side, the Effekt language is not optimized for performance that much, especially the \textsf{js-web} target running on javascript. On the other side the javascript runtime with its `just in time' \textit{jit} compiler does many, often not easily predictable optimizations, which can potentially lead to this indirection not incuring any significant runtime overhead. Considering those points, having the extra indirection for component iteration should not be a relevant slowdown while making the implementation much simpler and easier to understand.
+
+\section{Future work}
+
+TODO: list
+
+\section{Effekt language benefits and problems}
+
+While developing our game engine in Effekt, we came across quite a few problems, which were also in significant parts related to compiler bugs. The main reason behind this was that our game engine was one of the biggest and most complicated projects actually implemented in Effekt so far, but most of these bugs were fixed and the language generally improved during the implementation time.
+
+After learning the concepts of Effekt and implementing a complicated project using it, we think that Effekt is very promising as a research language in general, while also having the best and easiest to use effect system we have seen so far. It is relatively easy to learn and the effect system combined with all the concepts of the language make it very ergonomic to work with. We can recommend Effekt for future research and even production level projects in many areas that could benefit from effect systems.

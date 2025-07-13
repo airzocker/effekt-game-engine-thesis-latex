@@ -1,5 +1,7 @@
 \chapter{Effekt ECS}\label{chap:ecs}
 
+For our game engine library, visibility via namespaces was not feasable, as some |interface|s had internal and accessible operations, and it would be very time consuming to change this for our library. We instead chose to just prefix the internal effect operations with |internal_...|, so it would be clear as well that the developer using the library should not call these.
+
 \section{General differences}
 
 Comparing to existing ECS implementations, our version is an archetype based ECS and does not use chunks to store components for the same archetype. It uses effects to model all of the different parts a complete ECS needs, building up from simple ones.
