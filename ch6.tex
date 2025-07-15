@@ -1,5 +1,11 @@
 \chapter{Discussion}\label{chap:discussion}
 
+\section{Unique contribution of the thesis}
+
+After significant research, we found no real ECS based game engine, that also had an actuall implementation, in freely available academic research papers. This makes our contribution stand out, as it describes the concept and implementation of a working game engine using the ECS architecture and leveraging the Effekt language`s features.
+
+The idea to use the ECS architecture was not present from the start, but other solutions to a generic `world'/`scene' object management system seemed hard to implement in Effekt. Considering that, the ECS architecture seemed to fit our needs and was promising to implement using effects.
+
 \section{Restricting API usage}
 
 Currently, the Effekt language does not provide visibility modifiers. It does offer modules, but we chose instead to prefix all function/operation names that should never be called from library user code with `internal'. Using an `internal' module would still allow the library user to call these, so modules would not be able to limit the API usage either.
@@ -14,7 +20,7 @@ The first issue can be fixed as soon as a proper system for visibility/access re
 
 The initial plans for our query API was to specify the components and filters as generic types on query creation/handling and then iterate all the components via the query, not just the entity values themselfs. This turned out to not be feasable with the way the effect systems works. The current query API is quite verbose, including significant amounts of boilerplate code, but accomplishes the requirements in an easy to understand form. While easy to understand, the named handler syntax can need some getting used to.
 
-The queries in general also are not perfect yet, as they completely recalculate their matches before the next iteration whenever any structural change was made. This means adding a component to one single entity makes all queries recalculate for the next frame. The recalculation is compromised of checking all archetypes wether they include all required components but none of the `without' filter components and creating an array for these matching archetype indices. This very conservative approach can be improved in multiple ways, as mentioned in the `Future work' section.
+The queries in general also are not perfect yet, as they completely recalculate their matches before the next iteration whenever any structural change was made. This means adding a component to one single entity makes all queries recalculate for the next frame. The recalculation is compromised of checking all archetypes wether they include all required components but none of the `without' filter components and creating an array for these matching archetype indices. This very conservative approach can be improved in multiple ways, as mentioned in the Conclusion, under `Future work'.
 
 \section{Optimization and indirect component access}
 
@@ -22,12 +28,10 @@ Many ECS libraries choose to store all values of a component type in separate ar
 
 Our ECS uses a single dynamic array to densly store \textit{all} values of one component type and each archetype stores an additional array with indices into the component array for every entity of that archetype. This leads to one more indirection while iterating and non-sequental access of component values. While most production-ready or performance-focused ECS libraries would be significantly impacted by this, our library is for research and testing purposes. On one side, the Effekt language is not optimized for performance that much, especially the \textsf{js-web} target running on javascript. On the other side the javascript runtime with its `just in time' \textit{jit} compiler does many, often not easily predictable optimizations, which can potentially lead to this indirection not incuring any significant runtime overhead. Considering those points, having the extra indirection for component iteration should not be a relevant slowdown while making the implementation much simpler and easier to understand.
 
-\section{Future work}
+\section{Memory problems with javascript backend}
 
-TODO: list
+During testing of the engine and devoloping a game for a case study, we came across a problem of the current way javascript handles looping functions and the Effekt implementation.
 
-\section{Effekt language benefits and problems}
+The only way to create a continuously looping function in Effekt while giving control back to the javascript event loop to capture input events and more is to use the |wait| function, which uses the javascript |setTimeout| function. This makes the rest of the scope`s code a lambda function given to the |setTimeout|, which makes the memory allocated per-frame currently not be garbage collected. While running the case study `Snake' game, this leads to the used memory constantly increasing, crashing the game after around one minute of gameplay.
 
-While developing our game engine in Effekt, we came across quite a few problems, which were also in significant parts related to compiler bugs. The main reason behind this was that our game engine was one of the biggest and most complicated projects actually implemented in Effekt so far, but most of these bugs were fixed and the language generally improved during the implementation time.
-
-After learning the concepts of Effekt and implementing a complicated project using it, we think that Effekt is very promising as a research language in general, while also having the best and easiest to use effect system we have seen so far. It is relatively easy to learn and the effect system combined with all the concepts of the language make it very ergonomic to work with. We can recommend Effekt for future research and even production level projects in many areas that could benefit from effect systems.
+Without modifying the Effekt language, this would need a complicated workaround, which could be done in future work, as mentioned in the \cref{chap:conclusion}, under `Future work'.
