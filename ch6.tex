@@ -22,7 +22,7 @@ The initial plans for our query API was to specify the components and filters as
 
 The queries in general also are not perfect yet, as they completely recalculate their matches before the next iteration whenever any structural change was made. This means adding a component to one single entity makes all queries recalculate for the next frame. The recalculation is compromised of checking all archetypes wether they include all required components but none of the `without' filter components and creating an array for these matching archetype indices. This very conservative approach can be improved in multiple ways, as mentioned in the Conclusion, under `Future work'.
 
-\section{Optimization and indirect component access}
+\section{Optimization and indirect component access}\label{sec:indirectaccess}
 
 Many ECS libraries choose to store all values of a component type in separate arrays per archetype, while some even split these up into chunks of a specific size and memory alignement (often 16 kB). In both cases, many of the components that are iterated sequentially are also stored next to each other. This makes them very cache friendly and generally fast to iterate.
 

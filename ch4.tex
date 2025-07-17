@@ -14,27 +14,27 @@
   \node[box,minimum height=1.5cm,minimum width=3.5cm] at (#1,#2) {};
   \node[] at (#1,#2+0.5) {Component[T#3]};
   \node[] at (#1-0.75,#2) {Component ID};
-  \node[box,fill=green!10,minimum height=0.3cm,minimum width=0.3cm] (comp#3id) at (#1+0.75,#2) {};
+  \node[box,fill=blue!20,minimum height=0.3cm,minimum width=0.3cm] (comp#3id) at (#1+0.75,#2) {};
   \node[] at (#1-0.75,#2-0.5) {Values};
   \Boxarray{#1+0.75}{#2-0.5}{yellow!20}{comp#3arr}
 }
 
 \newcommand\Arch[3]{
-  \node[box,minimum height=2.5cm,minimum width=5cm,fill=blue!20] at (#1,#2) {};
+  \node[box,minimum height=2.5cm,minimum width=5cm,fill=green!20] at (#1,#2) {};
   \node[] at (#1,#2+1) {Arch #3};
   \node[] at (#1-1.5,#2+0.5) {Entities};
   \Boxarray{#1+1.5}{#2+0.5}{yellow!20}{arch#3entarr}
   \node[align=center] at (#1-1.5,#2-0.5) {Component ID\\to indices map};
 
-  \node[box,fill=green!10,minimum height=0.3cm,minimum width=0.3cm] (arch#3comp1id) at (#1,#2-0.1) {};
+  \node[box,fill=blue!20,minimum height=0.3cm,minimum width=0.3cm] (arch#3comp1id) at (#1,#2-0.1) {};
   \Boxarray{#1+1.5}{#2-0.1}{purple!20}{arch#3comp1arr}
   \draw[->] (arch#3comp1id.east) -- ([xshift=-0.6cm] arch#3comp1arr.west);
 
-  \node[box,fill=green!10,minimum height=0.3cm,minimum width=0.3cm] (arch#3comp2id) at (#1,#2-0.5) {};
+  \node[box,fill=blue!20,minimum height=0.3cm,minimum width=0.3cm] (arch#3comp2id) at (#1,#2-0.5) {};
   \Boxarray{#1+1.5}{#2-0.5}{purple!20}{arch#3comp2arr}
   \draw[->] (arch#3comp2id.east) -- ([xshift=-0.6cm] arch#3comp2arr.west);
 
-  \node[box,fill=green!10,minimum height=0.3cm,minimum width=0.3cm] (arch#3comp3id) at (#1,#2-0.9) {};
+  \node[box,fill=blue!20,minimum height=0.3cm,minimum width=0.3cm] (arch#3comp3id) at (#1,#2-0.9) {};
   \Boxarray{#1+1.5}{#2-0.9}{purple!20}{arch#3comp3arr}
   \draw[->] (arch#3comp3id.east) -- ([xshift=-0.6cm] arch#3comp3arr.west);
 }
@@ -50,7 +50,7 @@
 
 \begin{figure}
 \centering
-\tikzstyle{box}=[rectangle,draw,rounded corners=0.5ex,fill=blue!10]
+\tikzstyle{box}=[rectangle,draw,rounded corners=0.5ex,fill=green!10]
 \begin{tikzpicture}[thick,font=\sf\scriptsize]
   \Component{-2.5}{0}{1}
   \Component{2.5}{0}{2}
@@ -72,11 +72,11 @@
   \draw[-] ([xshift=0.6cm] entarr.east) -- ([yshift=-2.686cm] arch2comp3arr.south);
   \draw[->] ([yshift=-2.686cm] arch2comp3arr.south) -- (arch2comp3arr.south);
 \end{tikzpicture}
-\caption{Simplified internal entity and component storage architecture. Green boxes are values and multiple boxes arrays, where yellow arrays hold values (\textit{Entity} values included) and purple arrays indices into other arrays. All arrays stacked inside a single box have the same length and corresponding indices (columns).}
+\caption{Simplified internal entity and component storage architecture. Blue boxes are values and multiple boxes arrays, where yellow arrays store values (\textit{Entity} values included) and purple arrays store indices into other arrays. All arrays stacked inside a single box have the same length and corresponding indices (columns).}
 \label{fig:effektecs}
 \end{figure}
 
-\section{Component implementation and existentials}
+\section{Component implementation and existentials}\label{sec:compimpl}
 
 \begin{lstlisting}[caption=Component signiture]
 interface Component[T] {

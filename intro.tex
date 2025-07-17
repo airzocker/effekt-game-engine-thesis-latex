@@ -1,4 +1,4 @@
-\chapwithtoc{Introduction}\label{chap:introduction}
+\chapwithtoc{Introduction}
 
 \section*{Game engines}
 
@@ -54,21 +54,21 @@ Game engines range from simple libraries that introduce often used functions for
 \node[box,align=center,fill=blue!10,minimum height=3cm,minimum width=2cm] (gs) at (-9,-1) {Move\\System};
 \node[box,align=center,fill=purple!10,minimum height=3cm,minimum width=1cm] (gsq) at (-6.5,-1) {Query};
 \draw[->] (gs) -- node[midway,anchor=north] {iterate} (gsq);
-\draw[->] ([yshift=1cm] gsq.east) -- ([xshift=-1cm] a1p.west);
+\draw[-] ([yshift=1cm] gsq.east) -- ([xshift=-1cm] a1p.west);
 \draw[->] ([xshift=-1cm] a1p.west) -- ([xshift=0.25cm] a1p.west);
-\draw[->] ([yshift=1cm] gsq.east) -- ([xshift=-1cm] a1v.west);
+\draw[-] ([yshift=1cm] gsq.east) -- ([xshift=-1cm] a1v.west);
 \draw[->] ([xshift=-1cm] a1v.west) -- ([xshift=0.25cm] a1v.west);
-\draw[->] ([yshift=-1cm] gsq.east) -- ([xshift=-1cm] a2p.west);
+\draw[-] ([yshift=-1cm] gsq.east) -- ([xshift=-1cm] a2p.west);
 \draw[->] ([xshift=-1cm] a2p.west) -- ([xshift=0.25cm] a2p.west);
-\draw[->] ([yshift=-1cm] gsq.east) -- ([xshift=-1cm] a2v.west);
+\draw[-] ([yshift=-1cm] gsq.east) -- ([xshift=-1cm] a2v.west);
 \draw[->] ([xshift=-1cm] a2v.west) -- ([xshift=0.25cm] a2v.west);
 
 \node[box,align=center,fill=blue!10,minimum height=3cm,minimum width=2cm] (ds) at (-9,-5) {Healing\\System};
 \node[box,align=center,fill=purple!10,minimum height=3cm,minimum width=1cm] (dsq) at (-6.5,-5) {Query};
 \draw[->] (ds) -- node[midway,anchor=north] {iterate} (dsq);
-\draw[->] ([yshift=1cm] dsq.east) -- ([xshift=-1cm] a1h.west);
+\draw[-] ([yshift=1cm] dsq.east) -- ([xshift=-1cm] a1h.west);
 \draw[->] ([xshift=-1cm] a1h.west) -- ([xshift=0.25cm] a1h.west);
-\draw[->] ([yshift=-1cm] dsq.east) -- ([xshift=-1cm] a3h.west);
+\draw[-] ([yshift=-1cm] dsq.east) -- ([xshift=-1cm] a3h.west);
 \draw[->] ([xshift=-1cm] a3h.west) -- ([xshift=0.25cm] a3h.west);
 \end{tikzpicture}
 \caption{Example ECS structure (archetype based) with 3 archetypes and 2 systems. The \textit{Move System} queries and iterates over \textit{Position} and \textit{Velocity} components, the \textit{Healing System} over \textit{Health} components.}
@@ -101,4 +101,4 @@ A simple but fully functional ECS builds the basis for all other engine componen
 
 \section*{Structure of the Thesis}
 
-In this thesis we discuss some existing small or research-focused game engines and compare their working principles in chapter 1, introducing the Entity Component System architecture as well. In chapter 2 we go over the Effekt language and some of its most important features for this thesis. Then we describe the implementation of our game engine and its core differences to other game engines and ECSs in chapter 3. In chapter 4 we go over details of our game engine and how I used Effekt to make it easy to use. Then we present a case study of a `Snake' game implementation in chapter 5. Afterward, we discuss some improvements, limitations and possible future work in chapter 6. In the final chapter 7, we present our conclusion of the thesis.
+In this thesis we discuss some existing small or research-focused game engines and compare their working principles in \cref{chap:existing}, introducing the Entity Component System architecture as well. In \cref{chap:effekt} we go over the Effekt language and some of its most important features for this thesis. Then we describe the implementation of our game engine and its core differences to other game engines and ECSs in \cref{chap:engine}. In \cref{chap:details} we go over details of the game engine and how Effekt was used to make it easy to use. Then we present a case study of a `Snake' game implementation in \cref{chap:casestudy}. Afterward, we discuss some improvements, limitations and possible future work in \cref{chap:discussion}. In the final \cref{chap:conclusion}, we present our conclusion of the thesis.

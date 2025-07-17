@@ -1,4 +1,4 @@
-\chapter{Effekt ECS}\label{chap:ecs}
+\chapter{Effekt ECS}\label{chap:engine}
 
 For our game engine library, visibility via namespaces was not feasable, as some |interface|s had internal and accessible operations, and it would be very time consuming to change this for our library. We instead chose to just prefix the internal effect operations with |internal_...|, so it would be clear as well that the developer using the library should not call these.
 
@@ -6,22 +6,88 @@ For our game engine library, visibility via namespaces was not feasable, as some
 
 Comparing to existing ECS implementations, our version is an archetype based ECS and does not use chunks to store components for the same archetype. It uses effects to model all of the different parts a complete ECS needs, building up from simple ones.
 
-The ECS uses a |Component| effect to model the component storage of all instances of a single component type. Each entity then has a (potentially different) component index for each of its components, which is not very typical for existing ECSs. Details about this system are explained in Chapter 5 (Engine implementation details and problems) in the Section `Component implementation'. This often results in non-sequential iteration of components during runtime, which is not very efficient at memory access. Although this memory inefficiency should not make a very big difference on the \textsf{js-web} target, as we discuss in more detail in Chapter 6 (Discussion).
+The ECS uses a |Component| effect to model the component storage of all instances of a single component type. Each entity then has a (potentially different) component index for each of its components, which is not very typical for existing ECSs. Details about this system are explained in \cref{sec:compimpl}. This often results in non-sequential iteration of components during runtime, which is not very efficient at memory access. Although this memory inefficiency should not make a very big difference on the \textsf{js-web} target, as we discuss in more detail in \cref{sec:indirectaccess}.
 
-Component queries are also implemented differently to most other ECSs. We have a |Query| effect that can be defined as a named effect handler. Inside a system, the query iteration operation on the |Query| handler can then be called, which iterates over all queried entities. Onto a |Query| handler, different components and filters can be added. When a component (including optional ones) is added to the query, a new named handler of the |CompIter| effect gets defined. Inside the |Query| iteration loop the current component from each of the |CompIter| handlers can be retrieved and modified with the respective |get| and |set| effect operations. This is explained in more detail and with examples in the Section `Queries'.
+Component queries are also implemented differently to most other ECSs. We have a |Query| effect that can be defined as a named effect handler. Inside a system, the query iteration operation on the |Query| handler can then be called, which iterates over all queried entities. Onto a |Query| handler, different components and filters can be added. When a component (including optional ones) is added to the query, a new named handler of the |CompIter| effect gets defined. Inside the |Query| iteration loop the current component from each of the |CompIter| handlers can be retrieved and modified with the respective |get| and |set| effect operations. This is explained in more detail and with examples in \cref{sec:queries}.
 
 \section{World and engine}
+
+\newcommand\Engine[1]{
+  \node[box,minimum height=5cm,minimum width=4cm] at (0,#1) {};
+  \node[] at (0,#1+2.25) {engineWorld};
+  \node[box,fill=yellow!20,minimum height=0.5cm,minimum width=3cm] at (0,#1+1.5) {Position};
+  \node[box,fill=yellow!20,minimum height=0.5cm,minimum width=3cm] (enginecomp) at (0,#1+1) {Rotation};
+  \node[box,fill=yellow!20,minimum height=0.5cm,minimum width=3cm] at (0,#1+0.5) {Scale};
+  \node[box,fill=purple!20,minimum height=0.5cm,minimum width=3cm] at (0,#1-0.25) {RunWorld};
+  \node[box,fill=purple!20,minimum height=0.5cm,minimum width=3cm] (engineres) at (0,#1-0.75) {Time};
+  \node[box,fill=purple!20,minimum height=0.5cm,minimum width=3cm] at (0,#1-1.25) {TimeScale};
+  \node[box,fill=blue!10,minimum height=0.5cm,minimum width=3cm] (enginesys) at (0,#1-2) {Time \& Exit System};
+  \draw[->] ([yshift=-0.25cm] enginecomp.west) -- node[near start,anchor=north] {register} ([yshift=0.2cm] comp.east);
+  \draw[->] ([yshift=-0.25cm] engineres.west) -- node[near start,anchor=north] {register} ([yshift=0.2cm] res.east);
+  \draw[->] (enginesys.west) -- node[near start,anchor=north] {register} ([yshift=0.2cm] sys.east);
+}
+
+\newcommand\Canvasrenderer[1]{
+  \node[box,minimum height=4cm,minimum width=4cm] at (0,#1) {};
+  \node[] at (0,#1+1.75) {canvasRenderer};
+  \node[box,fill=yellow!20,minimum height=0.5cm,minimum width=3cm] (rendercomp) at (0,#1+1) {Shape};
+  \node[box,fill=yellow!20,minimum height=0.5cm,minimum width=3cm] at (0,#1+0.5) {DrawHeight};
+  \node[box,fill=purple!20,minimum height=0.5cm,minimum width=3cm] (renderres) at (0,#1-0.25) {Camera};
+  \node[box,fill=purple!20,minimum height=0.5cm,minimum width=3cm] at (0,#1-0.75) {WindowProperties};
+  \node[box,fill=blue!10,minimum height=0.5cm,minimum width=3cm] (rendersys) at (0,#1-1.5) {Render System};
+  \draw[->] ([yshift=-0.25cm] rendercomp.west) -- node[near start,anchor=north] {register} (comp.east);
+  \draw[->] ([yshift=-0.25cm] renderres.west) -- node[near start,anchor=north] {register} (res.east);
+  \draw[->] (rendersys.west) -- node[near start,anchor=north] {register} (sys.east);
+}
+
+\newcommand\Input[1]{
+  \node[box,minimum height=1cm,minimum width=4cm] (input) at (-8,#1) {};
+  \node[] at (-8,#1) {Input Module};
+  \draw[->] (ecs.north) -- node[midway,anchor=west] {init} (input.south);
+}
+
+\newcommand\Gamemodule[1]{
+  \node[box,minimum height=4cm,minimum width=4cm] at (0,#1) {};
+  \node[] at (0,#1+1.75) {Game (example)};
+  \node[box,fill=yellow!20,minimum height=0.5cm,minimum width=3cm] (gamecomp) at (0,#1+1) {Velocity};
+  \node[box,fill=yellow!20,minimum height=0.5cm,minimum width=3cm] at (0,#1+0.5) {Health};
+  \node[box,fill=purple!20,minimum height=0.5cm,minimum width=3cm] (gameres) at (0,#1-0.25) {PauseState};
+  \node[box,fill=blue!10,minimum height=0.5cm,minimum width=3cm] (gamesys) at (0,#1-1) {Move System};
+  \node[box,fill=blue!10,minimum height=0.5cm,minimum width=3cm] at (0,#1-1.5) {Healing System};
+  \draw[->] ([yshift=-0.25cm] gamecomp.west) -- node[near start,anchor=north] {register} ([yshift=-0.2cm] comp.east);
+  \draw[->] (gameres.west) -- node[near start,anchor=north] {register} ([yshift=-0.2cm] res.east);
+  \draw[->] ([yshift=-0.25cm] gamesys.west) -- node[near start,anchor=north] {register} ([yshift=-0.2cm] sys.east);
+}
+
+\begin{figure}
+\centering
+\tikzstyle{box}=[rectangle,draw,rounded corners=0.5ex,fill=green!10]
+\begin{tikzpicture}[thick,font=\sf\scriptsize]
+  \node[box,minimum height=3cm,minimum width=4cm] (ecs) at (-8,0) {};
+  \node[] at (-8,1.25) {ECS (world)};
+  \node[box,fill=yellow!20,minimum height=0.5cm,minimum width=3cm] (comp) at (-8,0.5) {Components (entities)};
+  \node[box,fill=purple!20,minimum height=0.5cm,minimum width=3cm] (res) at (-8,-0.25) {Resources};
+  \node[box,fill=blue!10,minimum height=0.5cm,minimum width=3cm] (sys) at (-8,-1) {Systems};
+  \draw[->] (sys.south) arc (90:450:5mm) node[midway,anchor=north] {steps every frame};
+  \Engine{5}
+  \Canvasrenderer{-0.5}
+  \Input{4}
+  \Gamemodule{-5.5}
+\end{tikzpicture}
+\caption{Structure of the Effekt game engine. The \textit{Game} module is an example of how the game logic is added to the engine.}
+\label{fig:effektengine}
+\end{figure}
 
 \begin{lstlisting}[caption=Engine initialization]
 with engineWorld();
 with canvasRenderer();
 \end{lstlisting}
 
-To use the ECS, the |World| effect must first be handled. The engine has some additional code around the ECS that creates basic resources and systems every game needs. Using this |engineWorld| function to initialize the engine also automatically creates a |World| effect handler first. If those resources and systems should not be needed, the |world| function can be used directly. Additionally, any needed modules can be initialized/added after handling a |World| by calling their initialization functions. One of these modules is the |canvasRenderer| that is currently needed for any graphical game.
+To use the ECS, the |World| effect must first be handled. The engine has some additional code around the ECS that creates basic resources and systems every game needs, as seen in \cref{fig:effektengine}. By using this |engineWorld| function to initialize the engine, it will also automatically create a |World| effect handler first. If those resources and systems should not be needed, the |world| function can be used directly. Additionally, any needed modules can be initialized/added after handling a |World| by calling their initialization functions. One of these modules is the |canvasRenderer| that is currently needed for any graphical game.
 
-The |World| effect is used to hold all systems and run them in order. As it also represents the base structure of my ECS, the |world| function, which handles the |World| effect also handles all of the internal effects that are needed by the ECS. This includes the |ComponentManager|, |ArchManager|, |EntityIdManager|, |EntityManager| and a resource that can be toggled to exit the game loop inside of the world. Most of these are explained more thoroughly in Chapter 4 (Engine implementation details and problems). Calling the |runWorld| effect operation of the |World| effect (|do runWorld();|) starts the game loop, executing all systems in order every frame, until the escape key is pressed.
+The |World| effect is used to hold all systems and run them in order. As it also represents the base structure of my ECS, the |world| function, which handles the |World| effect, also handles all of the internal effects that are needed by the ECS. This includes the |ComponentManager|, |ArchManager|, |EntityIdManager|, |EntityManager| and a resource that can be toggled to exit the game loop inside of the world. Most of these are explained more thoroughly in \cref{chap:details}. Calling the |runWorld| effect operation of the |World| effect (|do runWorld();|) starts the game loop, executing all systems in order every frame, until the escape key is pressed.
 
-Once a |World| has been handled, any modules and game code can be added to it by creating queries and adding systems which use these queries to the |World|. Some basic resources and systems get created by the |engineWorld| function, which include |Time|, |TimeScale| and their update system. It also resets the per-frame keyboard inputs from the input module using the \textit{ffi} and exits the game loop on pressing the escape key. Other modules like the |canvasRenderer| add their components, resources and systems in a similar way. The game code by the game developer does the same as well after initialization; Creating components, resources and adding systems to the |World| using queries.
+Once a |World| has been handled, any modules and game code can be added to it by creating queries and adding systems which use these queries to the |World|. Some basic resources and systems get created by the |engineWorld| function, which include |Time|, |TimeScale| and their update system, as seen in \cref{fig:effektengine}. It also resets the per-frame keyboard inputs from the input module using the \textit{ffi} and exits the game loop on pressing the escape key. Other modules like the |canvasRenderer| add their components, resources and systems in a similar way. The game code by the game developer does the same as well after initialization; Creating components, resources and adding systems to the |World| using queries.
 
 \section{Components and resources}
 
@@ -42,7 +108,7 @@ The |Component[T]| effect defines a component storage for the engine internals t
 
 The |Resource[T]| effect is very straightforward. When creating a resource with the |resource| function, an inital value must be provided, and that resource is then available to |get| or |set| at any time. This serves as single values that may be needed by multiple systems and should not be connected to any entity.
 
-\section{Queries and systems}
+\section{Queries and systems}\label{sec:queries}
 
 \begin{lstlisting}[caption=Query creation example]
 with def query = query();
