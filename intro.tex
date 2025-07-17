@@ -8,11 +8,80 @@ Game engines range from simple libraries that introduce often used functions for
 
 \section*{Entity Component System}
 
+\begin{figure}
+\centering
+\tikzstyle{box}=[rectangle,draw,rounded corners=0.5ex,minimum height=0.5cm,minimum width=1.5cm]
+\begin{tikzpicture}[thick,font=\sf\scriptsize]
+\node[box,minimum height=3cm,minimum width=5cm] at (0,0) {};
+\node[] at (0,1) {Archetype 1};
+\node[box,fill=gray!10] at (-1.5,0.5) {Entity 1};
+\node[box,fill=gray!10] at (0,0.5) {Entity 2};
+\node[box,fill=gray!10] at (1.5,0.5) {Entity 3};
+\node[box,fill=red!10] (a1h) at (-1.5,0) {Health};
+\node[box,fill=red!10] at (0,0) {Health};
+\node[box,fill=red!10] at (1.5,0) {Health};
+\node[box,fill=green!10] (a1p) at (-1.5,-0.5) {Position};
+\node[box,fill=green!10] at (0,-0.5) {Position};
+\node[box,fill=green!10] at (1.5,-0.5) {Position};
+\node[box,fill=yellow!10] (a1v) at (-1.5,-1) {Velocity};
+\node[box,fill=yellow!10] at (0,-1) {Velocity};
+\node[box,fill=yellow!10] at (1.5,-1) {Velocity};
+
+\node[box,minimum height=2.5cm,minimum width=3.5cm] at (0,-3.25) {};
+\node[] at (0,-2.5) {Archetype 2};
+\node[box,fill=gray!10] at (-0.75,-3) {Entity 4};
+\node[box,fill=gray!10] at (0.75,-3) {Entity 5};
+\node[box,fill=green!10] (a2p) at (-0.75,-3.5) {Position};
+\node[box,fill=green!10] at (0.75,-3.5) {Position};
+\node[box,fill=yellow!10] (a2v) at (-0.75,-4) {Velocity};
+\node[box,fill=yellow!10] at (0.75,-4) {Velocity};
+
+\node[box,minimum height=2.5cm,minimum width=6.5cm] at (0,-6.25) {};
+\node[] at (0,-5.5) {Archetype 3};
+\node[box,fill=gray!10] at (-2.25,-6) {Entity 6};
+\node[box,fill=gray!10] at (-0.75,-6) {Entity 7};
+\node[box,fill=gray!10] at (0.75,-6) {Entity 8};
+\node[box,fill=gray!10] at (2.25,-6) {Entity 9};
+\node[box,fill=red!10] (a3h) at (-2.25,-6.5) {Health};
+\node[box,fill=red!10] at (-0.75,-6.5) {Health};
+\node[box,fill=red!10] at (0.75,-6.5) {Health};
+\node[box,fill=red!10] at (2.25,-6.5) {Health};
+\node[box,fill=green!10] (a3p) at (-2.25,-7) {Position};
+\node[box,fill=green!10] at (-0.75,-7) {Position};
+\node[box,fill=green!10] at (0.75,-7) {Position};
+\node[box,fill=green!10] at (2.25,-7) {Position};
+
+\node[box,align=center,fill=blue!10,minimum height=3cm,minimum width=2cm] (gs) at (-9,-1) {Move\\System};
+\node[box,align=center,fill=purple!10,minimum height=3cm,minimum width=1cm] (gsq) at (-6.5,-1) {Query};
+\draw[->] (gs) -- node[midway,anchor=north] {iterate} (gsq);
+\draw[->] ([yshift=1cm] gsq.east) -- ([xshift=-1cm] a1p.west);
+\draw[->] ([xshift=-1cm] a1p.west) -- ([xshift=0.25cm] a1p.west);
+\draw[->] ([yshift=1cm] gsq.east) -- ([xshift=-1cm] a1v.west);
+\draw[->] ([xshift=-1cm] a1v.west) -- ([xshift=0.25cm] a1v.west);
+\draw[->] ([yshift=-1cm] gsq.east) -- ([xshift=-1cm] a2p.west);
+\draw[->] ([xshift=-1cm] a2p.west) -- ([xshift=0.25cm] a2p.west);
+\draw[->] ([yshift=-1cm] gsq.east) -- ([xshift=-1cm] a2v.west);
+\draw[->] ([xshift=-1cm] a2v.west) -- ([xshift=0.25cm] a2v.west);
+
+\node[box,align=center,fill=blue!10,minimum height=3cm,minimum width=2cm] (ds) at (-9,-5) {Healing\\System};
+\node[box,align=center,fill=purple!10,minimum height=3cm,minimum width=1cm] (dsq) at (-6.5,-5) {Query};
+\draw[->] (ds) -- node[midway,anchor=north] {iterate} (dsq);
+\draw[->] ([yshift=1cm] dsq.east) -- ([xshift=-1cm] a1h.west);
+\draw[->] ([xshift=-1cm] a1h.west) -- ([xshift=0.25cm] a1h.west);
+\draw[->] ([yshift=-1cm] dsq.east) -- ([xshift=-1cm] a3h.west);
+\draw[->] ([xshift=-1cm] a3h.west) -- ([xshift=0.25cm] a3h.west);
+\end{tikzpicture}
+\caption{Example ECS structure (archetype based) with 3 archetypes and 2 systems. The \textit{Move System} queries and iterates over \textit{Position} and \textit{Velocity} components, the \textit{Healing System} over \textit{Health} components.}
+\label{fig:ecs}
+\end{figure}
+
 The Entity Component System concept is not a single system, but rather an architectural pattern that is often used in game engines. It is based on the principle `composition over inheritance' and therefore uses a data-oriented design instead of an object oriented design. It models a \textit{world} in terms of components, entities and systems.
 
 \textit{Components} are a single piece of data, like a simple struct, for example a player`s/NPC character`s \textit{Health} (Integer) or \textit{Velocity} (2D or 3D Vector). \textit{Entities} are usually just an identifier or index, that identifies a single collection of these (different) components that work together to create that entity implicitly. For single instance data, like \textit{Time} or \textit{Assets}, some ECSs introduce \textit{Resources} that can be used inside a system besides component queries to hold a single value that does not belong to any entity. Other ECSs use a \textit{Singleton entity} concept for that, which ensures that such a global resource is added to one entity only.
 
-\textit{Systems} are functions that actually transform components from one state to the next, acting on a \textit{Query} of components, independent of the purpose of the corresponding entities. These systems should not hold any data themselves, as they are only meant to define the code that transforms a set of components. These systems can then be run by the engine in their order every frame for single threaded applications. For efficient multithreading, the systems can be scheduled in parallel while avoiding any race conditions or modification during iteration. This can be done by making sure only one system has write access to a specific component type at the same time.
+\textit{Systems} are functions that actually transform components from one state to the next, acting on a \textit{Query} of components, independent of the purpose of the corresponding entities. These systems should not hold any data themselves, as they are only meant to define the code that transforms a set of components. Systems can then be run by the engine in their order every frame for single threaded applications. For efficient multithreading, the systems can be scheduled in parallel while avoiding any race conditions or modification during iteration. This can be done by making sure only one system has write access to a specific component type at the same time.
+
+Many ECS libraries are \textit{archetype} based. Archetypes group entities by the set of components types they have, meaning multiple entities usually belong to the same archetype, which all have the same components with potentially different values. In the example presented in \cref{fig:ecs}, \textit{Archetype 1} could represent player entities with a |Health|, |Position| and |Velocity| component, whereas \textit{Archetype 2} with |Position| and |Velocity| could represent any simple moving object, like bullets. \textit{Archetype 3} could represent stationary enemies with just a |Health| and |Position|. The \textit{Move System} iterates all entities with |Position| and |Velocity| to modifiy the entity`s position based on its velocity. The \textit{Healing System} just iterates over all |Health| components to increase the entity`s health over time.
 
 \section*{Effekt language}
 

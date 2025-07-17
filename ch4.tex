@@ -1,5 +1,81 @@
 \chapter{Engine and ECS implementation details}\label{chap:details}
 
+\newcommand\Boxarray[4]{
+  \node[box,fill=#3,minimum height=0.3cm,minimum width=0.3cm] at (#1-0.6,#2) {};
+  \node[box,fill=#3,minimum height=0.3cm,minimum width=0.3cm] at (#1-0.3,#2) {};
+  \node[box,fill=#3,minimum height=0.3cm,minimum width=0.3cm] (#4) at (#1,#2) {};
+  \node[circle,fill=black,inner sep=0cm,minimum height=0.065cm,minimum width=0.065cm] at (#1+0.22,#2) {};
+  \node[circle,fill=black,inner sep=0cm,minimum height=0.065cm,minimum width=0.065cm] at (#1+0.3,#2) {};
+  \node[circle,fill=black,inner sep=0cm,minimum height=0.065cm,minimum width=0.065cm] at (#1+0.38,#2) {};
+  \node[box,fill=#3,minimum height=0.3cm,minimum width=0.3cm] at (#1+0.6,#2) {};
+}
+
+\newcommand\Component[3]{
+  \node[box,minimum height=1.5cm,minimum width=3.5cm] at (#1,#2) {};
+  \node[] at (#1,#2+0.5) {Component[T#3]};
+  \node[] at (#1-0.75,#2) {Component ID};
+  \node[box,fill=green!10,minimum height=0.3cm,minimum width=0.3cm] (comp#3id) at (#1+0.75,#2) {};
+  \node[] at (#1-0.75,#2-0.5) {Values};
+  \Boxarray{#1+0.75}{#2-0.5}{yellow!20}{comp#3arr}
+}
+
+\newcommand\Arch[3]{
+  \node[box,minimum height=2.5cm,minimum width=5cm,fill=blue!20] at (#1,#2) {};
+  \node[] at (#1,#2+1) {Arch #3};
+  \node[] at (#1-1.5,#2+0.5) {Entities};
+  \Boxarray{#1+1.5}{#2+0.5}{yellow!20}{arch#3entarr}
+  \node[align=center] at (#1-1.5,#2-0.5) {Component ID\\to indices map};
+
+  \node[box,fill=green!10,minimum height=0.3cm,minimum width=0.3cm] (arch#3comp1id) at (#1,#2-0.1) {};
+  \Boxarray{#1+1.5}{#2-0.1}{purple!20}{arch#3comp1arr}
+  \draw[->] (arch#3comp1id.east) -- ([xshift=-0.6cm] arch#3comp1arr.west);
+
+  \node[box,fill=green!10,minimum height=0.3cm,minimum width=0.3cm] (arch#3comp2id) at (#1,#2-0.5) {};
+  \Boxarray{#1+1.5}{#2-0.5}{purple!20}{arch#3comp2arr}
+  \draw[->] (arch#3comp2id.east) -- ([xshift=-0.6cm] arch#3comp2arr.west);
+
+  \node[box,fill=green!10,minimum height=0.3cm,minimum width=0.3cm] (arch#3comp3id) at (#1,#2-0.9) {};
+  \Boxarray{#1+1.5}{#2-0.9}{purple!20}{arch#3comp3arr}
+  \draw[->] (arch#3comp3id.east) -- ([xshift=-0.6cm] arch#3comp3arr.west);
+}
+
+\newcommand\EntityManager[2]{
+  \node[box,minimum height=1.5cm,minimum width=4cm] at (#1,#2) {};
+  \node[] at (#1,#2+0.5) {EntityManager};
+  \node[] at (#1-1,#2) {Entities};
+  \Boxarray{#1+1}{#2}{yellow!20}{entarr}
+  \node[] at (#1-1,#2-0.5) {Entity Datas};
+  \Boxarray{#1+1}{#2-0.5}{purple!20}{entarr}
+}
+
+\begin{figure}
+\centering
+\tikzstyle{box}=[rectangle,draw,rounded corners=0.5ex,fill=blue!10]
+\begin{tikzpicture}[thick,font=\sf\scriptsize]
+  \Component{-2.5}{0}{1}
+  \Component{2.5}{0}{2}
+
+  \node[box,minimum height=3.25cm,minimum width=11cm] at (0,-3.5) {};
+  \node[] at (0,-2.25) {ArchManager};
+  \Arch{-2.75}{-3.75}{1}
+  \Arch{2.75}{-3.75}{2}
+  \draw[-] ([xshift=0.6cm] arch2comp1arr.east) -- ([xshift=1.6cm] arch2comp1arr.east);
+  \draw[-] ([xshift=1.6cm] arch2comp1arr.east) -- ([xshift=1.6cm,yshift=2.25cm] arch2comp1arr.east);
+  \draw[-] ([xshift=1.6cm,yshift=2.25cm] arch2comp1arr.east) -- ([yshift=-0.935cm] comp1arr.south);
+  \draw[->] ([yshift=-0.936cm] comp1arr.south) -- (comp1arr.south);
+  \draw[-] ([xshift=0.6cm] arch2comp2arr.east) -- ([xshift=2.1cm] arch2comp2arr.east);
+  \draw[-] ([xshift=2.1cm] arch2comp2arr.east) -- ([xshift=2.1cm,yshift=3.15cm] arch2comp2arr.east);
+  \draw[-] ([xshift=2.1cm,yshift=3.15cm] arch2comp2arr.east) -- ([yshift=-0.436cm] comp2arr.south);
+  \draw[->] ([yshift=-0.436cm] comp2arr.south) -- (comp2arr.south);
+
+  \EntityManager{0}{-7}
+  \draw[-] ([xshift=0.6cm] entarr.east) -- ([yshift=-2.686cm] arch2comp3arr.south);
+  \draw[->] ([yshift=-2.686cm] arch2comp3arr.south) -- (arch2comp3arr.south);
+\end{tikzpicture}
+\caption{Simplified internal entity and component storage architecture. Green boxes are values and multiple boxes arrays, where yellow arrays hold values (\textit{Entity} values included) and purple arrays indices into other arrays. All arrays stacked inside a single box have the same length and corresponding indices (columns).}
+\label{fig:effektecs}
+\end{figure}
+
 \section{Component implementation and existentials}
 
 \begin{lstlisting}[caption=Component signiture]
@@ -15,9 +91,9 @@ interface Component[T] {
 }
 \end{lstlisting}
 
-A |Component[T]| handler creates a dynamic (resizable) array, containing all the values of that component type without any empty indices. To access a component value (get or set), a component index is used. When a new component is added, it is pushed at the end of the array. Removing an index works by swapping that value with the last one and popping that last index from the array. This returns the index that was at the end before, so the surrounding/calling code can update the component index of that entity to point to the newly swapped index.
+A |Component[T]| handler creates a dynamic (resizable) array, containing all the values of that component type without any empty indices. To access a component value (get or set), a component index is used. When a new component is added, it is pushed at the end of the array. Removing an index is done by swapping that value with the last one and popping that last index from the array. This returns the index that was at the end before, so the surrounding/calling code can update the component index of that entity to point to the newly swapped index.
 
-The engine internals use the component stores of each component type to store all of those values, without separating them by archetype. This way, iteration is usually not in order, but it reduces complexity and indirection. Any component value can be easily accessed by using the specific |Component[T]| effect and a component index.
+The engine internals use the component stores of each component type to store all of those values, without separating them by archetype. This can bee seen in \cref{fig:effektecs}. That way, iteration is usually not in order, but it reduces complexity and indirection. Any component value can be easily accessed by using the specific |Component[T]| effect and a component index.
 
 When trying to destroy an entity with multiple components, a major issue occurs. Using the previously mentioned way to remove a component by using the index requires the |Component| effect to be handled, which would need to be done for any component the entity currently has. As dynamic entities were a high priority, meaning any (single) component can be added or removed from an entity dynamically, the component types cannot be stored as part of the type of a component group. This means, the destroy entity operation cannot work by using the |Component| effects of all components the entity has, since that set changes dynamically at runtime.
 
@@ -30,7 +106,28 @@ interface ComponentManager {
 }
 \end{lstlisting}
 
-The solution for this component removal problem is using existential types and a |ComponentManager|. To register any component using the |component| function, the |ComponentManager| needs to be handled, which automatically happens when using the |world| or |engineWorld| setup functions. When a component then creates its component storage variable, it also registers that with the |ComponentManager|, assigning every component type a unique index. It also stores that component storage in an array itself, wrapped in an existential type, making its signature independent of the actual contained component type. When later needing to remove a component, the |ComponentManager| can then be used, together with a component id and index. Inside of that remove operation, the correct component storage is retrieved from an array using the id and matched on. Inside the match, that index can be removed and swapped with the last index by using the power of existential types. This works, because the match case knows the type of its component storage, without showing it in its type signature. This way, entities can be destroyed without needing to have any |Component| effect handled at that point.
+The solution for this component removal problem is using existential types and a |ComponentManager|. To register any component using the |component| function, the |ComponentManager| needs to be handled, which automatically happens when using the |world| or |engineWorld| setup functions. When a component then creates its component storage variable, it also registers that with the |ComponentManager|, assigning every component type a unique index. It also stores that component storage in an array itself, wrapped in an existential type (|UntypedComponentStore|), making its signature independent of the actual contained component type.
+
+\begin{lstlisting}[caption=UntypedComponentStore existential type]
+type UntypedComponentStore {
+  UntypedComponentStore[T](componentStore: ComponentStore[T])
+}
+\end{lstlisting}
+
+When later needing to remove a component, the |ComponentManager| can then be used, together with a component id and index. Inside of that remove operation, the correct component storage is retrieved from an array using the id and matched on. Inside the match, that index can be removed and swapped with the last index by using the power of existential types:
+
+\begin{lstlisting}[caption=Component remove operation]
+def internalRemoveComponent(componentId, index) = {
+  untypedComponentStores.unsafeGet(componentId) match {
+    case UntypedComponentStore(componentStore) => {
+      componentStore.removeComp(index);
+    }
+  }
+  resume(())
+}
+\end{lstlisting}
+
+This works, because the match case knows the type of its component storage, without showing it in its type signature. This way, entities can be destroyed without needing to have any |Component| effect handled at that point.
 
 \section{Archetypes and the ArchManager implementation}
 
@@ -67,13 +164,13 @@ interface ArchManager {
 }
 \end{lstlisting}
 
-The ECS needs to manage what entities have what components. As it is archetype based, the |ArchManager| effect takes that role. Archetypes define a specific set of component types, so every entity belongs to an archetype and ideally many entities belong to the same archetype. When a component is added or removed from an entity, the entity`s archetype changes. The |ArchManager| manages these and stores which entity belongs to which archetype. It creates an archetype whenever an entity gets a component removed or added while its new archetype is not yet present and removes archetypes that no entity belongs to anymore.
+The ECS needs to manage what entities have what components. As it is archetype based, the |ArchManager| effect takes that role. Archetypes define a specific set of component types, so every entity belongs to an archetype and ideally many entities belong to the same archetype. When a component is added or removed from an entity, the entity`s archetype changes. The |ArchManager| manages these and stores which entity belongs to which archetype, as seen in \cref{fig:effektecs}. It creates an archetype whenever an entity gets a component removed or added while its new archetype is not yet present and removes archetypes that no entity belongs to anymore.
 
 The |ArchManager| effect acts as the bridge between the |EntityManager| and the actual component values. It has operations to check if a component type is present on a specific entity index, create and destroy entities indices, as well as remove a component from an entity index and add/set or get the value of a component. In its handler, a resizable array is created to hold all |Arch| values, each representing one archetype. Each of those has a map from a component id to a resizable array, which contain all the component indices for the specific component type. Each of these is for one of the entities belonging to this archetype, aligned with a parallel resizable array in the |Arch| containing the actual |Entity| values for iteration.
 
 \section{EntityManager implementation and its API}
 
-\textit{Structural changes} is a term often used in ECSs to define changes that do more to the world than modify component values. They include entity creation/destruction, adding not yet present components or removing components. To summarize: Structural changes are modifications to the world, that may lead to queries needing to recalculate their matches.
+\textit{Structural changes} is a term often used in ECSs to define changes that do more to the world than modify component values. They include entity creation/destruction, adding components that were not yet present or removing components from an entity. To summarize: Structural changes are modifications to the world, that may lead to queries needing to recalculate their matches.
 
 Most of the API (interaction from the game developer side) to structurally modify entities and components in the world happens through the |EntityManager| effect. It has operations to check if an entity exists or if it has a specific component type. It can also create and destroy entities, remove components and add/set or get component values.
 
