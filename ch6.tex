@@ -28,7 +28,7 @@ Many ECS libraries choose to store all values of a component type in separate ar
 
 Our ECS uses a single dynamic array to densly store \textit{all} values of one component type and each archetype stores an additional array with indices into the component array for every entity of that archetype. This leads to one more indirection while iterating and non-sequental access of component values. While most production-ready or performance-focused ECS libraries would be significantly impacted by this, our library is for research and testing purposes. On one side, the Effekt language is not optimized for performance that much, especially the \textsf{js-web} target running on javascript. On the other side the javascript runtime with its `just in time' \textit{jit} compiler does many, often not easily predictable optimizations, which can potentially lead to this indirection not incuring any significant runtime overhead. Considering those points, having the extra indirection for component iteration should not be a relevant slowdown while making the implementation much simpler and easier to understand.
 
-\section{Memory problems with javascript backend}
+\section{Memory problems with javascript backend}\label{sec:memoryproblem}
 
 During testing of the engine and devoloping a game for a case study, we came across a problem of the current way javascript handles looping functions and the Effekt implementation.
 
