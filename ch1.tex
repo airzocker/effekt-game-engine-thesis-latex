@@ -20,10 +20,29 @@ Another commonly used memory layout are \textit{sparse sets}, which in its core 
 
 Other differences between the existing ECS libraries are mostly their API with the amount of boilerplate code needed and their additional features, that go beyond the very basic and essential core of an ECS. Some require more boilerplate code to use, but can be more idiomatic for the language and potentially easier to understand and work with in large projects. Others are based on the principle to make it as easy and simple to use with the least code possible. Additional features many of the existing libraries provide include systems instead of using queries explicitly and (multithreaded) scheduling for systems. Some also have change detection to filter components that might need to be processed again, as well as relations/relationships that can build the basis for parent/child hierarchies and other relations. A few libraries also include events and triggers/observers to avoid iterating many entities when only sometimes a single event is fired that needs the entities to be processed again.
 
-\section{ECS in existing game engines}
+\section{Grouping existing game engines}
 
+There are very view game engines that are developed with a focus on research or backed by freely available research papers that go over the full engine/architecture. This is why we have to compare community driven and commercial game engines without proper research focus as well.
 
-
-\section{Categorizing existing game engines}
-
-
+\begin{table}[h!]
+\centering
+\begin{tabular}{p{4cm}p{4cm}p{4cm}}
+\hline
+\textbf{Group} & \textbf{Engines} & \textbf{Core Architecture} \\
+\hline
+Data-Oriented ECS &
+Bevy, Unity (DOTS) &
+Decouples data and behavior via components and systems \\
+\hline
+Object-Oriented Scene Graphs &
+Unity (without DOTS), Unreal, Godot, PyGame, Löve &
+Behavior via components/methods, often imperative update loops \\
+\hline
+Functional or Declarative Architectures &
+Elm Game Engine, play-cljs, raylib in Haskell &
+Pure state transformations and signals \\
+\hline
+\end{tabular}
+\caption{Grouping game engines by architectural pattern.}
+\label{tab:grouping}
+\end{table}

@@ -8,8 +8,6 @@ The main feature of Effekt are effects, which express \textit{capabilities} that
 
 The effects (capabilities) that a function need from its caller and the ones it handles are included in its type signiture, so the compiler can check that all used effects are also handled~\cite{brachthauser2022effects}. A |main| function can only be run if it does not have any unhandled effects. Effect handlers can also be defined via a function that takes a code block as argument (often called |prog|). Inside the handler function, the effect can be handled and the passed |prog| function called (|try \{ prog() \} with ...|). These handler functions can then be called (and in turn handle an effect) with the \textit{with} keyword, which makes the rest of the current scope`s code get passed as the first block argument. In this example it would be in the form of |with myExceptionHandler()|, where the rest of the call-site scope`s code will automatically become the |prog| argument, so afterwards |do raise()| can be called without writing the handler implementation inline and needing to indent all of the following code.
 
-TODO: \textit{algebraic effects}
-
 Effect operations can have argument types, which values of need to be provided in the operation call when using/calling the effect operation. In this example it could look like |do raise("We got an Error")|, meaning the effect operation argument is of the \textit{String} type.
 
 \section{Contextual effect polymorphism}
