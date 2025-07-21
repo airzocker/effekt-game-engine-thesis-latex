@@ -10,6 +10,12 @@ Designing a simple, straightforward and ergonomic API is also possible with effe
 
 The solution presented in this thesis can be used to develop simple 2D games with Effekt. This can be the basis for future work regarding game engines, entity component systems and the Effekt language. It can also serve as a benchmark for future improvements of the Effekt language in a relatively big, complicated and performance intensive environment.
 
+\section*{Effekt language benefits and problems}
+
+While developing our game engine in Effekt, we came across quite a few problems, which were also in significant parts related to compiler bugs. The main reason behind this was that our game engine was one of the biggest and most complicated projects actually implemented in Effekt so far, but most of these bugs were fixed and the language generally improved during the implementation time.
+
+After learning the concepts of Effekt and implementing a complicated project using it, we came to the conclusion that Effekt is very promising as a research language in general, while also having one of the best and easiest to use effect systems we have seen so far. It is relatively easy to learn and the effect system combined with all the concepts of the language make it very ergonomic to work with. We can recommend Effekt for future research and even small usable projects in many areas that could benefit from effect systems.
+
 \section*{Future work}
 
 \begin{itemize}
@@ -18,9 +24,3 @@ The solution presented in this thesis can be used to develop simple 2D games wit
 \item[] \textbf{Additional features:} The game engine is currently quite bare, only providing the minimum to create games much faster than without an engine while keeping a stable and extensible architecture with the ECS. Future work could expand the capabilities by adding entity hierarchies, textures/sprites, physics, making it 3D capable or other features. With an LLVM port, the possibility to use existing and capable 3D graphics or physics libraries and interfacing them with the game engine could be evaluated.
 \item[] \textbf{Bigger case study game:} As mentioned in \cref{sec:memoryproblem}, even simple games do not run longer than one or two minutes becaues of a memory problem with the game loop function and the javascript backend. This only occurs for javascript, so future work could either modify Effekt or research a workaround that collects the memory of each frame. An alternative would be the LLVM port, which does not have the problem in the first place. In both cases, future work could also contain the case study of a bigger game, to better showcase the ECS advantages, as larger and more complicated games benefit more from the engine architecture. A more complicated game has not been implemented in this thesis for time reasons, as well as the memory problem.
 \end{itemize}
-
-\section*{Effekt language benefits and problems}
-
-While developing our game engine in Effekt, we came across quite a few problems, which were also in significant parts related to compiler bugs. The main reason behind this was that our game engine was one of the biggest and most complicated projects actually implemented in Effekt so far, but most of these bugs were fixed and the language generally improved during the implementation time.
-
-After learning the concepts of Effekt and implementing a complicated project using it, we came to the conclusion that Effekt is very promising as a research language in general, while also having one of the best and easiest to use effect systems we have seen so far. It is relatively easy to learn and the effect system combined with all the concepts of the language make it very ergonomic to work with. We can recommend Effekt for future research and even small usable projects in many areas that could benefit from effect systems.

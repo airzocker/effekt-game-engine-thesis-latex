@@ -2,7 +2,15 @@
 
 The first implementation started with a simple \textit{Pong} game that was then split and evolved into the actual game engine. After most of the engine was implemented, we developed a \textit{Snake} game with and without the engine to compare both versions. In this case study, we show the differences between both versiosn and how the engine makes game development simpler and better organized.
 
-\textit{Snake} is more of a genre than single game. The first version that was for a single player with one snake that eats apples to grow larger was \textit{Snake Byte} written by Chuck Sommerville for the Apple II and published by Sirius Software in 1982. The player can control the next direction the head of the snake turns to, which moves on a grid. \textit{Snake Byte} was based on 28 levels, whereas our version, like many simple implementations, use just a single apple. For these single level implementations, one apple always exists in the world that adds one score when eating while also increasing the snake`s length by one grid unit. The game is over when the snake head runs into an outer wall or its own tail. Our version is based on this simple single level concept for the most part.
+\textit{Snake} is more of a genre than single game. The first version that was for a single player with one snake that eats apples to grow larger was \textit{Snake Byte} written by Chuck Sommerville for the Apple II and published by Sirius Software in 1982. The player can control the next direction the head of the snake turns to, which moves on a grid. \textit{Snake Byte} was based on 28 levels, whereas our version, like many simple implementations, use just a single apple. For these single level implementations, one apple always exists in the world that adds one score when eating while also increasing the snake`s length by one grid unit. The game is over when the snake head runs into an outer wall or its own tail.\\
+Our version is based on this simple single level concept for the most part. A screenshot during the gameplay of this Snake implementation can be seen in \cref{fig:snake}.
+
+\begin{figure}
+\centering
+\includegraphics[width=\linewidth]{img/snake_screenshot.png}
+\caption{Screenshot of the Snake Game (version using the game engine).}
+\label{fig:snake}
+\end{figure}
 
 \section{Defining Components and Resources}
 
