@@ -1,56 +1,144 @@
-\chapter{The Effekt language}\label{chap:effekt}
+\chapter{The Effekt Language}\label{chap:effekt}
 
-Effekt is a research-level programming language developed by the Software Engineering Group at the Universität Tübingen. It features an effect system, which provides the main features that set it apart from existing and well-known languages. Effekt can be transpiled/compiled to JavaScript, Chez Scheme or LLVM. The syntax has many similarities to Scala, which allows a very imperative programming style, while internally working on a largely functional programming model.
+Effekt is a research-level programming language developed by the Software Engineering Group at the Universität Tübingen~\footnote{\url{https://effekt-lang.org}}. It features an effect system, which provides the main features that set it apart from existing and well-known languages. Effekt can be transpiled/compiled to JavaScript, Chez Scheme or LLVM. The syntax has many similarities to Scala, which allows a very imperative programming style, while internally working on a largely functional programming model.
 
-\section{Effects and handlers}
+\section{Effects and Handlers}
 
-The main feature of Effekt are effects, which express \textit{capabilities} that are tracked with the type system~\cite{brachthauser2020effects}. These capabilities can be seen as very capable exceptions for easier understanding. In most traditional languages, excaptions can be thrown and then catched in a surrounding block, which is what the simplest \textit{effect} or \textit{interface} can do. Interfaces are like effects, but they can include multiple operations together that can be handled by a single handler. `Throwing' this exception would be equivalent to calling the effect operation, like |do raise()| in effect. The `catching' (handling) looks like |try \{ ... \} with raise = \{ ... \}| then.
+The main feature of Effekt are effects, which express \textit{capabilities} that are tracked with the type system~\cite{brachthauser2020effects}. These capabilities can be seen as very capable exceptions for easier understanding. In most traditional languages, exceptions can be thrown and then caught in a surrounding block, which is what the simplest \textit{effect} or \textit{interface} can do. Interfaces are like effects, but they can include multiple operations together that can be handled by a single handler. `Throwing' this exception would be equivalent to calling the effect operation, like |do raise()| in effect. This could be the signature for such a singleton (single operation) effect:
 
-The effects (capabilities) that a function need from its caller and the ones it handles are included in its type signiture, so the compiler can check that all used effects are also handled~\cite{brachthauser2022effects}. A |main| function can only be run if it does not have any unhandled effects. Effect handlers can also be defined via a function that takes a code block as argument (often called |prog|). Inside the handler function, the effect can be handled and the passed |prog| function called (|try \{ prog() \} with ...|). These handler functions can then be called (and in turn handle an effect) with the \textit{with} keyword, which makes the rest of the current scope`s code get passed as the first block argument. In this example it would be in the form of |with myExceptionHandler()|, where the rest of the call-site scope`s code will automatically become the |prog| argument, so afterwards |do raise()| can be called without writing the handler implementation inline and needing to indent all of the following code.
+\begin{lstlisting}
+effect raise(): Unit
+\end{lstlisting}
 
-Effect operations can have argument types, which values of need to be provided in the operation call when using/calling the effect operation. In this example it could look like |do raise("We got an Error")|, meaning the effect operation argument is of the \textit{String} type.
+The `catching' (handling) is then defined in a |try| block:
 
-\section{Contextual effect polymorphism}
+\begin{lstlisting}
+try {
+  do raise()
+} with raise {
+  ...
+}
+\end{lstlisting}
 
-The Effect language features lightweight contextual effect polymorphism, which means that the effects mentioned in the type signiture of a function does not need to include any effect that could potentially be used inside a computation that also gets passed to this function~\cite{brachthauser2020effects}. The effects in the type signiture mention just the effects that the code of the function itself \textit{needs} to work and what it actually \textit{handles} itself. This means that a higher order function that takes another code block, for example the |map| function, can be called with a block that uses an effect (like our |raise| example). The signiture of |map| still does not mention any needed or handled effect, as it does not use the effect directly. This effect then needs to be handled at the \textit{call-site} of |map|, meaning any effect that is handled there can be used in the code block that |map| uses.
+The effects (capabilities) that a function need from its caller and the ones it handles are included in its type signature, so the compiler can check that all used effects are also handled~\cite{brachthauser2022effects}. A |main| function can only be run if it does not have any unhandled effects. Effect handlers can also be defined via a function that takes a code block as argument (often called |prog|). Inside the handler function, the effect can be handled and the passed |prog| function called:
 
-The contextual effect polymorphism describes that a \textit{pure} function is not necissarily pure, but does not use any effects itself. It can still use effects implicitly that get mentioned and handled elsewhere, like inside computations that get passed to the function.
+\begin{lstlisting}
+def handleRaise() { prog: => Unit / raise } = {
+  try {
+    prog()
+  } with raise {
+    ...
+  }
+}
+\end{lstlisting}
 
-\section{Resumtion}
+These handler functions can then be called (and in turn handle an effect) using the \textit{with} keyword, which makes the rest of the current scope`s code get passed as the first block argument. In this example it would be in the form of |with handleRaise()|, where the rest of the call-site scope`s code will automatically become the |prog| argument, so afterward |do raise()| can be called without writing the handler implementation inline and needing to indent all the following code.
 
-Effect operations can also have a return type, which gets passed back to the call-site of the effect operation when calling the |resume| function in the handler. This gives the control flow back to where the effect operation was called~\cite{brachthauser2020effects}. There, the return value of the effect operation is the value that gets passed back from the handler in the |resume| call. This makes concepts like generators and iterators possible, which are implemented in the \textit{stream} library with |read| and |emit| effects as pull and push streams. It could also pause the code execution at a point with an |await| effect and later resume there, making asynchronous programming on one thread possible.
+Effect operations can have argument types, which values of need to be provided in the operation call when using/calling the effect operation. In this example, it could look like |do raise("We got an Error")|, meaning the effect operation argument is of the \textit{String} type. This would then be the signature of |raise|:
 
-When a handler implementation goes out of scope, it will also finish execution of all its handled effect operation calls. This means for every call of an effect operation the handler had to handle and a |resume| got called, it will continue execution after the |resume| to the end of the handler implementation. This also allows to resume multiple times, calling the continuation of the call-site of the effect operation again at a later time~\cite{brachthauser2020effects}\cite{muhcu2025multipleresumptions}. Executing code of a handler implementation after the handler goes out of scope also allows for deferred modification and other concepts by applying the modification after the |resume| call.
+\begin{lstlisting}
+effect raise(msg: String): Unit
+\end{lstlisting}
 
-\section{Bidirectional effects}
+Effects and handlers are the most important concept of the language, which are used everywhere in our game engine implementation and its API.
 
-Effect operations can also use other effects themselves, which need to be handled at the call site of the effect operation. These are called bidirectional effects~\cite{zhang2020bidirectional}. These are annotated as required effects in the signiture of the effect operation and their operations can be used (called) inside the handler implementation. Therefore this effect can be used in the handler without needing to be handled at the site of the handler implementation, but at the call site of the effect operation.
+\section{Contextual Effect Polymorphism}
 
-\section{Data types and regions}
+The Effect language features lightweight contextual effect polymorphism, which means that the effects mentioned in the type signature of a function does not need to include any effect that could potentially be used inside a computation that also gets passed to this function~\cite{brachthauser2020effects}. The effects in the type signature mention just the effects that the code of the function itself \textit{needs} to work, and what it actually \textit{handles} itself. This means that a higher order function that takes another code block, for example the |map| function, can be called with a block that uses an effect (like our |raise| example). The signature of |map| still does not mention any needed or handled effect, as it does not use the effect directly. This effect then needs to be handled at the \textit{call-site} of |map|, meaning any effect that is handled there can be used in the code block that |map| uses.
 
-The base data types are |String|, |Bool|,|Int|, |Double| and |Char|. These can be stored as \textit{values} (|val|, immutable) or \textit{variables} (|var|, mutable) and literals can have one of those types (e.g. "Hello", true, 3, 5.4 and 'c'). \textit{Tuples} are a way to group multiple types into a single one, surrounded by paranthesis and separated by commas. Their fields can be accessed with numbers, like |t.1|, starting from 1.
+The contextual effect polymorphism describes that a \textit{pure} function is not necessarily pure, but does not use any effects itself. It can still use effects implicitly that get mentioned and handled elsewhere, like inside computations that get passed to the function. This feature is important for multiple parts of our game engine implementation, mainly making |System|s possible by being able to provide code blocks with arbitrary functionality that is handled at the call site of adding a system. This is further elaborated in \Cref{sec:systems}.
+
+\section{Resumption}
+
+Effect operations can also have a return type, which gets passed back to the call-site of the effect operation when calling the |resume| function in the handler. This gives the control flow back to where the effect operation was called~\cite{brachthauser2020effects}. There, the return value of the effect operation is the value that gets passed back from the handler in the |resume| call. This makes concepts like generators and iterators possible, which are implemented in the \textit{stream} library with |read| and |emit| effects as pull and push streams. It could also pause the code execution at a point with an |await| effect and later resume there, making asynchronous programming on one thread possible. Resumption is a very important concept of the language and used everywhere in our game engine implementation and its API. The following code shows the signature of a |yieldInt| effect as an example, which has a return value of type |Int|:
+
+\begin{lstlisting}
+effect yieldInt(): Int
+\end{lstlisting}
+
+When a handler implementation goes out of scope, it will also finish execution of all its handled effect operation calls. This means for every call of an effect operation the handler had to handle and a |resume| got called, it will continue execution after the |resume| to the end of the handler implementation. This also allows resuming multiple times, calling the continuation of the call-site of the effect operation again at a later time~\cite{brachthauser2020effects}\cite{muhcu2025multipleresumptions}. Executing code of a handler implementation after the handler goes out of scope also allows for deferred modification and other concepts by applying the modification after the |resume| call. This is covered in-depth in \Cref{sec:entitymanager}.
+
+\section{Bidirectional Effects}
+
+Effect operations can also use other effects themselves, which need to be handled at the call site of the effect operation. These are called bidirectional effects~\cite{zhang2020bidirectional}. These are annotated as required effects in the signature of the effect operation, and their operations can be used (called) inside the handler implementation. Therefore, this effect can be used in the handler without needing to be handled at the site of the handler implementation, but at the call site of the effect operation.\\
+A simple example of this is the |read| effect from the stream library, which requires the |stop| effect, with the following signatures:
+
+\begin{lstlisting}
+effect read[A](): A / stop
+
+effect stop(): Nothing
+\end{lstlisting}
+
+The |read| effect needs |stop| handled at the call site of |do read()|, as the pull stream needs to signal the end of stream (no more values available) by then calling the |stop| operation itself.\\
+Bidirectional effects are used in multiple parts of our game engine implementation, making the |EntityManager| and other effects possible by being able to provide certain effects, like a specific |Component[T]|, at the call site of the effect operation instead of the handler definition. This is further elaborated in \Cref{sec:entitymanager}.
+
+\section{Data Types and Regions}
+
+The base data types are |String|, |Bool|,|Int|, |Double| and |Char|. These can be stored as \textit{values} (|val|, immutable) or \textit{variables} (|var|, mutable) and literals can have one of those types (e.g. "Hello", true, 3, 5.4 and 'c'). \textit{Tuples} are a way to group multiple types into a single one, surrounded by parenthesis and separated by commas. Their fields can be accessed with numbers, like |t.1|, starting from 1.
 
 For user defined types, the simplest form is a |record|, which is like a simple struct in other languages. It can have a name (like |Vec2|) and any number of named fields. A record can just be created as a whole, there is no built-in way to assign to just a single field of a record or tuple variable. When a more complex \textit{sum}/\textit{tagged union} type is needed, a |type| can be defined instead of a record. They consist of any number of variants, which are each defined like a record.
 
 All values and variables consisting of multiple variants or fields can also be deconstructed in a pattern \textit{match}, where each field can be assigned to a name inside the match arm directly.
 
-The last kind of types are \textit{object}s, which are an instance of an effect (usually an interface). It is created by writing |new MyInterface \{ ... \}| instead of the typical handler with |try \{ ... \} with MyInterface \{ ... \}|. This |object| does not have fields, but all the effect operations of the respective effect can be called on it. It is a \textit{computation} type and not a \textit{value} type, which is why it is created with the |def| keyword instead of |val| or |var|. This means it cannot be returned from functions.
+The last kind of types are \textit{object}s, which are an instance of an effect (usually an interface). They are created by writing a handler implementation with |def ... new| instead of |try ... with|:
 
-When an object or any other computation type, which are second-class, needs to be returned from a function, it needs to be boxed~\cite{brachthauser2022effects}. Boxing a computation type makes its (potentially invisibly) captured \textit{capabilities} explicit in its type signiture. This includes \textit{region}s that specify which variables are used by the object~\cite{muller2023capabilities} as well as the effects, which all need to be available in the current scope to unbox the value and use it. There are special regions for |global| and |io|, that specifies the use of the global mutable variable storage effekt uses in the background, as well as the use of input/output, like |println|.
+\begin{lstlisting}
+def myInterface = new MyInterface {
+  ...
+}
+\end{lstlisting}
 
-\section{Named effect handlers}
+This |object| does not have fields, but all the effect operations of the respective effect can be called on it. It is a \textit{computation} type and not a \textit{value} type, which is why it is created with the |def| keyword instead of |val| or |var|. This means it cannot be returned from functions.
 
-Named effect handlers are very similar to objects, but they are not created with the |new| keyword. A named handler can be defined with a function that handles an effect or a handler directly. As seen before, handlers can be used like |with myExceptionHandler()|. When multiple handlers of the same effect are needed in the same scope simultaniously, for example to handle different kinds of exceptions with the same effect, or if it should just have a name instead of being handled for the whole sope, named effect handlers can be used~\cite{xie2022named}. In this case, we could change our handler to directly take a |String| message at the call site of the handler, so it does not need to be specified for every single |raise| call.
+When an object or any other computation type, which are second-class, needs to be returned from a function, it needs to be boxed~\cite{brachthauser2022effects}. Boxing a computation type makes its (potentially invisibly) captured \textit{capabilities} explicit in its type signature. This includes \textit{region}s that specify which variables are used by the object~\cite{muller2023capabilities} as well as the effects, which all need to be available in the current scope to unbox the value and use it. There are special regions for |global| and |io|, that specifies the use of the global mutable variable storage effekt uses in the background, as well as the use of input/output, like |println|.
 
-Named effect handlers can be created using the |def| keyword similar to objects, which then looks like this: |with def outOfBounds = myExceptionHandler("Out of Bounds")|. A handler implementation can also directly name its handler like this: |try \{ ... \} with outOfBounds: raise \{ ... \}|. In both cases, the handler is now bound to the name |outOfBounds| instead of just being handled. When the |raise| operation of this effect is needed, it can now be written as |outOfBounds.raise()| instead of |do raise("Out of bounds")|. Now another exception, like |fileNotFound|, can be defined and used in the same scope.
+\section{Named Effect Handlers}
 
-\section{Type system and existential types}
+Named effect handlers are very similar to objects, but they are not created with the |new| keyword. A named handler can be defined with a function that handles an effect or a handler directly. As seen before, handlers can be used like |with myExceptionHandler()|. When multiple handlers of the same effect are needed in the same scope simultaneously, for example to handle different kinds of exceptions with the same effect, or if it should just have a name instead of being handled for the whole scope, named effect handlers can be used~\cite{xie2022named}. In this case, we could change our handler to directly take a |String| message at the call site of the handler, so it does not need to be specified for every single |raise| call.
 
-The Effekt language has a strict type system that is enforced at compile time. This includes static type polymorphism, which is monomorphized at compile time. Another concept that is supported are existential types, which are user defined types that have a polymorphic type parameter in one or more of their variants. This type can then be the polymorphic type of fields inside the variant, for example the type of a |List[T]| field. When matching on this variant, the field can then just be used and that polymorphic type is known inside the match arm, without the actual type definition needing to annotate or keep that polymorhic type in its signiture.
+Named effect handlers can be created using the |def| keyword similar to objects, which then looks like this:
 
-This makes it possible, for example, to store (a reference to) an array with a generic type |T|, while not mentioning |T| in the signiture of that variant`s type. Therefore values containing different types of arrays can be stored in a single collection of just the plain type values. Now a function could remove any index of any of them by just needing to know the indices, but not mentioning the underlaying generic types (|T|).
+\begin{lstlisting}
+effect raise(): Unit
 
-\section{Namespaces and visibility}
+def handleRaise(msg: String) { prog: => Unit / raise } = {
+  try {
+    prog()
+  } with raise {
+    println(msg)
+  }
+}
+
+...
+  with def outOfBounds = handleRaise("Out of Bounds");
+  outOfBounds.raise() // Prints "Out of Bounds"
+...
+\end{lstlisting}
+
+A handler implementation can also directly name its handler like this:
+
+\begin{lstlisting}
+effect raise(): Unit
+
+...
+  try {
+    outOfBounds.raise() // Prints "Out of Bounds"
+  } with outOfBounds: raise {
+    println("Out of Bounds")
+  }
+...
+\end{lstlisting}
+
+In both cases, the handler is now bound to the name |outOfBounds| instead of just being handled. When the |raise| operation of this effect is needed, it can now be written as |outOfBounds.raise()| instead of |do raise("Out of bounds")|. Now another exception, like |fileNotFound|, can be defined and used in the same scope.\\
+Named handlers are used in some parts of our game engine implementation, making the current |Query| syntax possible. We go into details about this in \Cref{sec:query}.
+
+\section{Type System and Existential Types}
+
+The Effekt language has a strict type system that is enforced at compile time. This includes static type polymorphism, which is monomorphized at compile time. Another concept that is supported are existential types, which are user defined types that have a polymorphic type parameter in one or more of their variants. This type can then be the polymorphic type of fields inside the variant, for example the type of a |List[T]| field. When matching on this variant, the field can then just be used and that polymorphic type is known inside the match arm, without the actual type definition needing to annotate or keep that polymorphic type in its signature.
+
+This makes it possible, for example, to store (a reference to) an array with a generic type |T|, while not mentioning |T| in the signature of that variant`s type. Therefore, values containing different types of arrays can be stored in a single collection of just the plain type values. Now a function could remove any index of any type by just needing to know the indices, but not mentioning the underlaying generic type (|T|). This is used in our game engine implemenation to make dynamic entities possible, as components can removed and changed without needing the related |Component[T]| effect handled using existential types. This is further elaborated in \Cref{sec:compimpl}.
+
+\section{Namespaces and Visibility}
 
 Function, type and effect definitions can be grouped by creating namespaces, which are blocks surrounding that code. They can also be nested. To access the definitions from namespaces, its name following double colons is needed, after which the definition name can be accessed.
 

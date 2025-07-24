@@ -1,11 +1,11 @@
-\chapter{Case study: Snake game}\label{chap:casestudy}
+\chapter{Case Study: Snake Game}\label{chap:casestudy}
 
-The first implementation started with a simple \textit{Pong} game that was then split and evolved into the actual game engine. After most of the engine was implemented, we developed a \textit{Snake} game with and without the engine to compare both versions. In this case study, we show the differences between both versiosn and how the engine makes game development simpler and better organized.
+The first implementation started with a simple \textit{Pong} game that was then split and evolved into the actual game engine. After most of the engine was implemented, we developed a \textit{Snake} game with and without the engine to compare both versions. In this case study, we show the differences between both versions and how the engine makes game development simpler and better organized.
 
-\textit{Snake} is more of a genre than single game. The first version that was for a single player with one snake that eats apples to grow larger was \textit{Snake Byte} written by Chuck Sommerville for the Apple II and published by Sirius Software in 1982. The player can control the next direction the head of the snake turns to, which moves on a grid. \textit{Snake Byte} was based on 28 levels, whereas our version, like many simple implementations, use just a single apple. For these single level implementations, one apple always exists in the world that adds one score when eating while also increasing the snake`s length by one grid unit. The game is over when the snake head runs into an outer wall or its own tail.\\
-Our version is based on this simple single level concept for the most part. A screenshot during the gameplay of this Snake implementation can be seen in \cref{fig:snake}.
+\textit{Snake} is more of a genre than a single game. The first version that was for a single player with one snake that eats apples to grow larger was \textit{Snake Byte} written by Chuck Sommerville for the Apple II and published by Sirius Software in 1982. The player can control the next direction the head of the snake turns to, which moves on a grid. \textit{Snake Byte} was based on 28 levels, whereas our version, like many simple implementations, use just a single apple. For these single level implementations, one apple always exists in the world that adds one score when eating, while also increasing the snake`s length by one grid unit. The game is over when the snake head runs into an outer wall or its own tail.\\
+Our version is based on this simple single level concept for the most part. A screenshot during the gameplay of this Snake implementation can be seen in \Cref{fig:snake}.
 
-\begin{figure}
+\begin{figure}[h!]
 \centering
 \includegraphics[width=\linewidth]{img/snake_screenshot.png}
 \caption{Screenshot of the Snake Game (version using the game engine).}
@@ -24,7 +24,7 @@ record NextTail(value: Entity)
 record Score(value: Int)
 \end{lstlisting}
 
-The components are then registered at the start of the main function after defining the default panicing ECS exception handler and initializing the |engineWorld| and |canvasRenderer|:
+The components are then registered at the start of the main function after defining the default panicking ECS exception handler and initializing the |engineWorld| and |canvasRenderer|:
 
 \begin{lstlisting}
 with panicOnEcsException();
@@ -64,8 +64,9 @@ The standalone version does not define any extra |records| to hold data, as it d
 
 \section{Initialization}
 
-In addition to registering components and resources, the game constants are also defined at the start of the main function:
+In addition to registering components and resources, the game constants are also defined at the start of the main function, as seen in \Cref{fig:caseconstants}.
 
+\begin{figure}[h!]
 \begin{lstlisting}
 // Color constants
 val wallColor = Color(100, 98, 105);
@@ -81,13 +82,17 @@ val startPos = unif((gridSize / 2).toDouble());
 val startDir = Vector2Int(0, 1);
 val gameOverTextScale = 1.0 / 12.0;
 \end{lstlisting}
+\caption{Snake game constants, defined at the start of the main function.}
+\label{fig:caseconstants}
+\end{figure}
 
 These constants are defined the same way in the standalone version, but all the game state is also defined as simple variables after the constants instead of implicitly inside the entities` components.
 
 From now on, the version with the game engine and the standalone version diverge much more, so we will just show the engine version first.
 
-In the game engine version, the initialization of the world is defined in a local function to be able to initialize it again when restarting after a game over. This function mainly initializes resources and creates entities with the right components:
+In the game engine version, the initialization of the world is defined in a local function to be able to initialize it again when restarting after a game over. This function mainly initializes resources and creates entities with the right components, as seen in \Cref{fig:caseinit}.
 
+\begin{figure}[h!]
 \begin{lstlisting}
 def initGame() = {
   do setResource[MoveTimer](MoveTimer(moveTime, false));
@@ -129,6 +134,11 @@ def initGame() = {
   ...
 }
 \end{lstlisting}
+\caption{Snake game initialization function. This creates all the entities in the world and initializes all resources.}
+\label{fig:caseinit}
+\end{figure}
+
+This initialization function can be called anywhere, where the direct/first |EntityManager| of the |World| is in scope (allowed to be used), as it captures that |EntityManager| and calls the required effect operations on it.
 
 \section{Game Loop}
 
@@ -145,10 +155,11 @@ def gameOver() = {
 }
 \end{lstlisting}
 
-After this, all of the game loop is just defined by adding systems to the world and then running it with |do runWorld()|. The |initGame| function is called once before |runWorld| and then after the Enter key is pressed while in the game over state, to restart the game.
+After this, all the game loop is just defined by adding systems to the world and then running it with |do runWorld()|. The |initGame| function is called once before |runWorld| and then after the Enter key is pressed while in the game over state, to restart the game.
 
-One system just updates resources and therefore does not need any queries:
+One system just updates resources and therefore does not need any queries, as seen in \Cref{fig:caseresources}.
 
+\begin{figure}[h!]
 \begin{lstlisting}
 with system() {
   // Update game dimensions from window size
@@ -167,9 +178,13 @@ with system() {
   }
 };
 \end{lstlisting}
+\caption{Snake game resource update system. This system updates the camera and move timer.}
+\label{fig:caseresources}
+\end{figure}
 
-Other systems use a query to iterate components, like the head update system, which updates the head direction based on the current key inputs:
+Other systems use a query to iterate components, like the head update system seen in \Cref{fig:casemove}, which updates the head direction based on the current key inputs.
 
+\begin{figure}[h!]
 \begin{lstlisting}
 with def query = query();
 with def positions = query.addC[Position]();
@@ -215,19 +230,23 @@ with system() {
   ()
 };
 \end{lstlisting}
+\caption{Snake game head update system. This system updates the next head direction from user input.}
+\label{fig:casemove}
+\end{figure}
 
-After these, there are systems added to update the tails based on their proceeding snake part, update the apple (find a new position), detect collisions with the head and update the score text. One system updates all the |LastPosition| components based on the |Position| components, except if a game over state occured. In this case it resets the |Position| to the |LastPosition| value, so the snake does not actually run into the object it collided with, but stops before it. One last system queries \textit{all} entities and it destroys them all when the Enter key is pressed during game over, which restarts the game, after which it calls the |initGame| function again.
+After these, there are systems added to update the tails based on their proceeding snake part, update the apple (find a new position), detect collisions with the head and update the score text. One system updates all the |LastPosition| components based on the |Position| components, except if a game over state occurred. In this case it resets the |Position| to the |LastPosition| value, so the snake does not actually run into the object it collided with, but stops before it.\\
+One last system queries \textit{all} entities, and it destroys them all when the Enter key is pressed during game over, which restarts the game, after which it calls the |initGame| function again.
 
-\section{Differences without the game engine}
+\section{Differences Without the Game Engine}
 
-The standalone version is only slightly longer (372 versus 339 lines of code), but that version lacks some features and needed copying of significant parts of the engine code, which would need to be implemented for every single game that is not using the game engine. This includes managing the whole canvas API, dealing with window properties, direct javascript key events for input and creating its own game loop.
+The standalone version is only slightly longer (372 versus 339 lines of code), but that version lacks some features and needed copying of significant parts of the engine code, which would need to be implemented for every single game that is not using the game engine. This includes managing the whole canvas API, dealing with window properties, direct JavaScript key events for input and creating its own game loop.
 
 The first missing feature is the ability to restart the game, which would need a more complicated implementation than just a query that destroys every entity and putting the initialization code, which is needed anyway, in a local function.\\
 Another feature difference is that the standalone version is always pinned to the top left corner of the available window area. The version with the game engine stays in the middle of the available window area instead of the top left, no matter if the height or width is the smaller side. This is simply a result from using the canvas renderer implementation, which uses a dynamic camera.\\
-The last, missing feature is drawing circles. This means the apple is not being drawn round, but as a square as well. Drawing a circle requires multiple lines of javascript code, so it would need an additional javascript implementation in addition to the |extern| function definition in Effekt.
+The last, missing feature is drawing circles. This means the apple is not being drawn round, but as a square as well. Drawing a circle requires multiple lines of JavaScript code, so it would need an additional JavaScript implementation in addition to the |extern| function definition in Effekt.
 
 Other than having to copy many parts of the engine to make the standalone game work at all, the code differences include not having any vector |record|, because it would only be useful if some vector functions would be implemented along with the |record|, making the code much longer again. In the engine, vectors are implemented in the math module, including all basic math functions needed for game development. This means in the standalone version, all positions and directions are stored as separate values or variables for the X and Y value.\\
-The general structure of the game loop is also much different. It defines a function to create a new apple as well es defining the whole game loop as a function. This first has to update the window properties to at least allow for dynamic resizing of the window and then updating the game time. Both of these are implemented automatically in the game engine. Then the head direction is updated directly and collision checks are done. After that the head and tail positions get updated and the head position is compared against the apple to check if it has been eaten. After all the state updates, the drawing is implemented. This part can be completely left out for the version with the game engine, as the engine does all the rendering automatically. The standalone version has to first define a function to draw a full grid rectangle based on only a grid position to make it a little bit less verbose. Then the canvas has to be cleared manually and every square that has to be drawn needs its own function call with position, size and color.
+The general structure of the game loop is also much different. It defines a function to create a new apple, as well es defining the whole game loop as a function. This first has to update the window properties to at least allow for dynamic resizing of the window and then updating the game time. Both of these are implemented automatically in the game engine. Then the head direction is updated directly, and collision checks are done. After that, the head and tail positions get updated, and the head position is compared against the apple to check if it has been eaten. After all the state updates, the drawing is implemented. This part can be completely left out for the version with the game engine, as the engine does all the rendering automatically. The standalone version has to first define a function to draw a full grid rectangle based on only a grid position to make it a little bit less verbose. Then the canvas has to be cleared manually and every square that has to be drawn needs its own function call with position, size and color.
 
 \section{Case Study Conclusion}
 

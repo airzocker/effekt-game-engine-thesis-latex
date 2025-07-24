@@ -1,25 +1,29 @@
 \def\ThesisTypeTitle{Bachelor Thesis}
 
-\def\ThesisTitle{Structuring game engines with effects and handlers}
+\def\ThesisTitle{Structuring Game Engines With Effects and Handlers}
 \def\ThesisAuthor{Felix Becker}
 \def\ThesisStudentID{5760770}
-\def\ThesisTitlePDF{Structuring game engines with effects and handlers}
+\def\ThesisTitlePDF{Structuring Game Engines With Effects and Handlers}
 \def\ThesisAuthorPDF{Felix Becker}
 \def\ThesisSubmissionDate{\xxx{24.12.2412}}
 \def\ThesisPeriod{01.04.2025 - 31.07.2025}
 
 \def\ThesisAbstract{
+    Game engines are an essential part in the ever-growing gaming industry, as modern requirements and graphics are getting harder and harder to implement without using a game engine. The \textit{Entity Component System} architecture is a promising pattern to improve upon Object-Oriented designs in performance, flexibility, scalability and modularity through the concept of `composition over inheritance' by completely separating persistent data and behavior. Existing ECS libraries and game engines using ECS, however, are complex and implemented on a very low level.\\
+    In this thesis, we provide a short and capable implementation of an \textit{Entity Component System} and combining it with a 2D renderer and other basic modules required for a game engine. For this, we leverage an effect system with algebraic effects and lexical handlers by using the Effekt research language. This also helps us to make the game engine as modular as possible and provide a simple and ergonomic API using just a few straightforward interfaces. We demonstrate the feasibility of the developed approach to game engines with a Snake game, serving as a case study.
 }
 
 \def\ThesisSummaryDE{
+    Spiel-Engines sind ein essenzieller Teil der stetig wachsenden Spieleindustrie, da moderne Anforderungen und Grafiken immer schwerer ohne Spiel-Engines zu implementieren sind. Die \textit{Entity Component System} Architektur ist ein vielversprechendes Design Pattern um bestehende objektorientierte Designs in Performance, Flexibilität, Erweiterbarkeit und Modularität mit dem Konzept `composition over inheritance' (Komposition über Vererbung) zu verbessern, welches Daten und Verhalten (Transformation) gänzlich voneinander trennt. Bestehende ECS Bibliotheken und Spiel-Engines welche ECS verwenden sind allerdings komplex und auf eine sehr hardwarenahen Ebene implementiert.\\
+    In dieser Arbeit zeigen wir eine kurze und fähige Implementation eines \textit{Entity Component System} und kombinieren diese mit einem 2D Renderer und anderen Basismodulen, welche für eine Spiel-Engine nötig sind. Dafür nutzen wir die Vorteile eines Effektsystems mit algebraischen Effekten und lexikalischen Handlern, welche in der Effekt Forschungssprache vorhanden sind. Dies hilft uns auch dabei, die Spiel-Engine so modular wie möglich zu machen und eine simple und ergonomische API mit nur wenigen, klaren Interfaces zu definieren. Wir demonstrieren die Nutzbarkeit des entwickelten Ansatzes für Spiel-Engines mit einem Snake Spiel, welches als Feldstudie dient.
 }
 
 \def\FirstReviewerName{Jun. Prof. Dr. Jonathan Immanuel Brachthäuser}
-\def\FirstReviewerDepartment{\xxx{Wilhelm-Schickard-Institut für Informatik}}
+\def\FirstReviewerDepartment{Wilhelm-Schickard-Institut für Informatik}
 \def\FirstReviewerUniversity{Universität Tübingen}
 
 \def\Acknowledgements{
-    \xxx{It is customary to say thanks to supervisors, friends, family, and food providers.}
+    I like to thank Ji\v{r}\'{i} Bene\v{s} and Dr. Jonathan Immanuel Brachthäuser for their support and advice during the implementation phase, as well as their feedback on writing the thesis. I also want to thank my parents for giving me the time and space to work on this thesis, as well as their support and feedback on it.
 }
 
 \def\SecondReviewerName{}
