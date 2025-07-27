@@ -1,6 +1,7 @@
 \chapter{The Effekt Language}\label{chap:effekt}
 
-Effekt is a research-level programming language developed by the Software Engineering Group at the Universität Tübingen~\footnote{\url{https://effekt-lang.org}}. It features an effect system, which provides the main features that set it apart from existing and well-known languages. Effekt can be transpiled/compiled to JavaScript, Chez Scheme or LLVM. The syntax has many similarities to Scala, which allows a very imperative programming style, while internally working on a largely functional programming model.
+Effekt is a research-level programming language developed by the Software Engineering Group at the Universität Tübingen. It features an effect system, which provides the main features that set it apart from existing and well-known languages. Effekt can be transpiled/compiled to JavaScript, Chez Scheme or LLVM. The syntax has many similarities to Scala, which allows a very imperative programming style, while internally working on a largely functional programming model.\\
+This is an overview of the language, but we cannot cover all features and syntax thoroughly, as it is a complex language. For more examples and guides, we recommend the Effekt language website~\footnote{\url{https://effekt-lang.org}}.
 
 \section{Effects and Handlers}
 
@@ -32,7 +33,7 @@ def handleRaise() { prog: => Unit / raise } = {
 }
 \end{lstlisting}
 
-These handler functions can then be called (and in turn handle an effect) using the \textit{with} keyword, which makes the rest of the current scope`s code get passed as the first block argument. In this example it would be in the form of |with handleRaise()|, where the rest of the call-site scope`s code will automatically become the |prog| argument, so afterward |do raise()| can be called without writing the handler implementation inline and needing to indent all the following code.
+These handler functions can then be called (and in turn handle an effect) using the \textit{with} keyword, which makes the rest of the current scope's code get passed as the first block argument. In this example it would be in the form of |with handleRaise()|, where the rest of the call-site scope's code will automatically become the |prog| argument, so afterward |do raise()| can be called without writing the handler implementation inline and needing to indent all the following code.
 
 Effect operations can have argument types, which values of need to be provided in the operation call when using/calling the effect operation. In this example, it could look like |do raise("We got an Error")|, meaning the effect operation argument is of the \textit{String} type. This would then be the signature of |raise|:
 
@@ -136,7 +137,7 @@ Named handlers are used in some parts of our game engine implementation, making 
 
 The Effekt language has a strict type system that is enforced at compile time. This includes static type polymorphism, which is monomorphized at compile time. Another concept that is supported are existential types, which are user defined types that have a polymorphic type parameter in one or more of their variants. This type can then be the polymorphic type of fields inside the variant, for example the type of a |List[T]| field. When matching on this variant, the field can then just be used and that polymorphic type is known inside the match arm, without the actual type definition needing to annotate or keep that polymorphic type in its signature.
 
-This makes it possible, for example, to store (a reference to) an array with a generic type |T|, while not mentioning |T| in the signature of that variant`s type. Therefore, values containing different types of arrays can be stored in a single collection of just the plain type values. Now a function could remove any index of any type by just needing to know the indices, but not mentioning the underlaying generic type (|T|). This is used in our game engine implemenation to make dynamic entities possible, as components can removed and changed without needing the related |Component[T]| effect handled using existential types. This is further elaborated in \Cref{sec:compimpl}.
+This makes it possible, for example, to store (a reference to) an array with a generic type |T|, while not mentioning |T| in the signature of that variant's type. Therefore, values containing different types of arrays can be stored in a single collection of just the plain type values. Now a function could remove any index of any type by just needing to know the indices, but not mentioning the underlaying generic type (|T|). This is used in our game engine implemenation to make dynamic entities possible, as components can removed and changed without needing the related |Component[T]| effect handled using existential types. This is further elaborated in \Cref{sec:compimpl}.
 
 \section{Namespaces and Visibility}
 

@@ -86,7 +86,7 @@ with engineWorld();
 with canvasRenderer();
 \end{lstlisting}
 
-The |World| effect is used to hold all systems and run them in order. As it also represents the base structure of my ECS, the |world| function, which handles the |World| effect, also handles all of the internal effects that are needed by the ECS. This includes the |ComponentManager|, |ArchManager|, |EntityIdManager|, |EntityManager| and a resource that can be toggled to exit the game loop inside the world. Most of these are explained more thoroughly in \Cref{chap:details}. Calling the |runWorld| effect operation of the |World| effect (|do runWorld();|) starts the game loop, executing all systems in order every frame, until the escape key is pressed.
+The |World| effect is used to hold all systems and run them in order. As it also represents the base structure of the developed ECS, the |world| function, which handles the |World| effect, also handles all of the internal effects that are needed by the ECS. This includes the |ComponentManager|, |ArchManager|, |EntityIdManager|, |EntityManager| and a resource that can be toggled to exit the game loop inside the world. Most of these are explained more thoroughly in \Cref{chap:details}. Calling the |runWorld| effect operation of the |World| effect (|do runWorld();|) starts the game loop, executing all systems in order every frame, until the escape key is pressed.
 
 Once a |World| has been handled, any modules and game code can be added to it by creating queries and adding systems which use these queries to the |World|. Some basic resources and systems get created by the |engineWorld| function, which include |Time|, |TimeScale| and their update system, as seen in \Cref{fig:effektengine}. It also resets the per-frame keyboard inputs from the input module using the \textit{ffi} and exits the game loop on pressing the escape key. Other modules like the |canvasRenderer| add their components, resources and systems similarly. The game code by the game developer does the same as well after initialization; Creating components, resources and adding systems to the |World| using queries.
 
@@ -129,7 +129,7 @@ with system() {
   val deltaTime = (do getResource[Time]()).deltaTime;
   // Iterate query, ignoring actual "Entity" values
   query.foreach() { (_) =>
-    // Update velocity
+    // Update y-axis velocity
     var velocity = velocities.get().value;
     velocity = velocity + Vector2(0.0, -9.81 * deltaTime);
     velocities.set(Velocity(velocity));
@@ -148,6 +148,6 @@ This example system will apply gravity and change the position from its velocity
 
 \section{Entity Manager}
 
-The |EntityManager| effect gets automatically handled when using the |world| or |engineWorld|, as it is a core part of the ECS internals. It can be used to create and destroy entities and remove components from them. It can also be used to set components (or add when it is not yet present) and get the current value of components. It also has operations available to check if an entity exists or if it has a specific component. Using the |EntityManager| to create an entity returns the newly created |Entity|`s value, which can for example be stored in a component on another entity to reference it. Most of the other operations, like |setComponent| also need an |Entity| as argument, to which the operation is applied.
+The |EntityManager| effect gets automatically handled when using the |world| or |engineWorld|, as it is a core part of the ECS internals. It can be used to create and destroy entities and remove components from them. It can also be used to set components (or add when it is not yet present) and get the current value of components. It also has operations available to check if an entity exists or if it has a specific component. Using the |EntityManager| to create an entity returns the newly created |Entity|'s value, which can for example be stored in a component on another entity to reference it. Most of the other operations, like |setComponent| also need an |Entity| as argument, to which the operation is applied.
 
-Inside systems, the |EntityManager| effect is overwritten by a different handler to make deferred modification possible for structural changes (create/destroy entities and add/remove components). This ensures there is no modification during iteration, which could lead to an infinite loop or remove components that are yet to be iterated. Other operations, like getting a component, only work if the entity already exists and immediately has the given component on it. These are not deferred and just passed to the outer |EntityManager| handler.
+Inside all systems, the |EntityManager| effect is overwritten by a different handler to make deferred modification possible for structural changes (create/destroy entities and add/remove components). This ensures there is no modification during iteration, which could lead to an infinite loop or remove components that are yet to be iterated. Other operations, like getting a component, only work if the entity already exists and immediately has the given component on it. These are not deferred and just passed to the outer |EntityManager| handler.
