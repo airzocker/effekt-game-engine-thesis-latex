@@ -66,7 +66,11 @@ Thesis period: \ThesisPeriod
 
 \cleardoublepage
 
+\ifodd\value{page}\else\newpage\fi
+
 \tableofcontents
+
+\cleardoublepage
 
 \pagestyle{plain}
 \pagenumbering{arabic}

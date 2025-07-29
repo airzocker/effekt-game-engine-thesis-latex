@@ -1,7 +1,8 @@
 \chapter{The Effekt Language}\label{chap:effekt}
 
-Effekt is a research-level programming language developed by the Software Engineering Group at the Universität Tübingen. It features an effect system, which provides the main features that set it apart from existing and well-known languages. Effekt can be transpiled/compiled to JavaScript, Chez Scheme or LLVM. The syntax has many similarities to Scala, which allows a very imperative programming style, while internally working on a largely functional programming model.\\
-This is an overview of the language, but we cannot cover all features and syntax thoroughly, as it is a complex language. For more examples and guides, we recommend the Effekt language website~\footnote{\url{https://effekt-lang.org}}.
+Effekt~\cite{brachthauser2020effects} is a research-level programming language developed by the Software Engineering Group at the Universität Tübingen. It features an effect system, which provides the main features that set it apart from existing and well-known languages. Effekt can be transpiled/compiled to JavaScript, Chez Scheme or LLVM. The syntax has many similarities to Scala, which allows a very imperative programming style, while internally working on a largely functional programming model.
+
+The following provides an overview of the language, but we cannot cover all features and syntax thoroughly, as it is a complex language. For more examples and guides, we recommend the Effekt language website\footnote{\url{https://effekt-lang.org}}.
 
 \section{Effects and Handlers}
 
@@ -41,6 +42,8 @@ Effect operations can have argument types, which values of need to be provided i
 effect raise(msg: String): Unit
 \end{lstlisting}
 
+Traditionally effects (or exceptions) were dynamically-scoped. This means, when an operation/exception is called, the call-stack is unwound dynamically to find the closest matching handler. As this means the actual handler implemenation used depends on the run-time call-stack, some problems can occur, such as another handler overwriting the outer one, when this is not intended. The Effekt language implements lexical effect handlers~\cite{brachthauser2020effects,biernacki2019binders}. This make handlers lexically scoped, which, for Effekt, means passing capabilities (effects/handlers) explicitly~\cite{brachthauser2022effects}. Internally, that means passing the actual effect handler around as a variable. This results in the used handler being known for every effect operation call at compile-time.
+
 Effects and handlers are the most important concept of the language, which are used everywhere in our game engine implementation and its API.
 
 \section{Contextual Effect Polymorphism}
@@ -51,17 +54,18 @@ The contextual effect polymorphism describes that a \textit{pure} function is no
 
 \section{Resumption}
 
-Effect operations can also have a return type, which gets passed back to the call-site of the effect operation when calling the |resume| function in the handler. This gives the control flow back to where the effect operation was called~\cite{brachthauser2020effects}. There, the return value of the effect operation is the value that gets passed back from the handler in the |resume| call. This makes concepts like generators and iterators possible, which are implemented in the \textit{stream} library with |read| and |emit| effects as pull and push streams. It could also pause the code execution at a point with an |await| effect and later resume there, making asynchronous programming on one thread possible. Resumption is a very important concept of the language and used everywhere in our game engine implementation and its API. The following code shows the signature of a |yieldInt| effect as an example, which has a return value of type |Int|:
+Effect operations can also have a return type, which a value of gets passed back to the call-site of the effect operation when calling the |resume| function in the handler. This gives the control flow back to where the effect operation was called~\cite{brachthauser2020effects}. There, the return value of the effect operation is the value that gets passed back from the handler in the |resume| call. This makes concepts like generators and iterators possible, which are implemented in the \textit{stream} library with |read| and |emit| effects as pull and push streams. It could also pause the code execution at a point with an |await| effect and later resume there, making asynchronous programming on one thread possible. Resumption is a very important concept of the language and used everywhere in our game engine implementation and its API. The following code shows the signature of a |yieldInt| effect as an example, which has a return value of type |Int|:
 
 \begin{lstlisting}
 effect yieldInt(): Int
 \end{lstlisting}
 
-When a handler implementation goes out of scope, it will also finish execution of all its handled effect operation calls. This means for every call of an effect operation the handler had to handle and a |resume| got called, it will continue execution after the |resume| to the end of the handler implementation. This also allows resuming multiple times, calling the continuation of the call-site of the effect operation again at a later time~\cite{brachthauser2020effects}\cite{muhcu2025multipleresumptions}. Executing code of a handler implementation after the handler goes out of scope also allows for deferred modification and other concepts by applying the modification after the |resume| call. This is covered in-depth in \Cref{sec:entitymanager}.
+When a handler implementation goes out of scope, it will also finish execution of all its handled effect operation calls. This means for every call of an effect operation the handler had to handle and a |resume| got called, it will continue execution after the |resume| to the end of the handler implementation. This also allows resuming multiple times, calling the continuation of the call-site of the effect operation again at a later time~\cite{brachthauser2020effects,muhcu2025multipleresumptions}. Executing code of a handler implementation after the handler goes out of scope also allows for deferred modification and other concepts by applying the modification after the |resume| call. This is covered in-depth in \Cref{sec:entitymanager}.
 
 \section{Bidirectional Effects}
 
-Effect operations can also use other effects themselves, which need to be handled at the call site of the effect operation. These are called bidirectional effects~\cite{zhang2020bidirectional}. These are annotated as required effects in the signature of the effect operation, and their operations can be used (called) inside the handler implementation. Therefore, this effect can be used in the handler without needing to be handled at the site of the handler implementation, but at the call site of the effect operation.\\
+Effect operations can also use other effects themselves, which need to be handled at the call site of the effect operation. These are called bidirectional effects~\cite{zhang2020bidirectional}. These are annotated as required effects in the signature of the effect operation, and their operations can be used (called) inside the handler implementation. Therefore, this effect can be used in the handler without needing to be handled at the site of the handler implementation, but at the call site of the effect operation.
+
 A simple example of this is the |read| effect from the stream library, which requires the |stop| effect, with the following signatures:
 
 \begin{lstlisting}
@@ -70,7 +74,8 @@ effect read[A](): A / stop
 effect stop(): Nothing
 \end{lstlisting}
 
-The |read| effect needs |stop| handled at the call site of |do read()|, as the pull stream needs to signal the end of stream (no more values available) by then calling the |stop| operation itself.\\
+The |read| effect needs |stop| handled at the call site of |do read()|, as the pull stream needs to signal the end of stream (no more values available) by then calling the |stop| operation itself.
+
 Bidirectional effects are used in multiple parts of our game engine implementation, making the |EntityManager| and other effects possible by being able to provide certain effects, like a specific |Component[T]|, at the call site of the effect operation instead of the handler definition. This is further elaborated in \Cref{sec:entitymanager}.
 
 \section{Data Types and Regions}
@@ -130,12 +135,13 @@ effect raise(): Unit
 ...
 \end{lstlisting}
 
-In both cases, the handler is now bound to the name |outOfBounds| instead of just being handled. When the |raise| operation of this effect is needed, it can now be written as |outOfBounds.raise()| instead of |do raise("Out of bounds")|. Now another exception, like |fileNotFound|, can be defined and used in the same scope.\\
+In both cases, the handler is now bound to the name |outOfBounds| instead of just being handled. When the |raise| operation of this effect is needed, it can now be written as |outOfBounds.raise()| instead of |do raise("Out of bounds")|. Now another exception, like |fileNotFound|, can be defined and used in the same scope.
+
 Named handlers are used in some parts of our game engine implementation, making the current |Query| syntax possible. We go into details about this in \Cref{sec:query}.
 
 \section{Type System and Existential Types}
 
-The Effekt language has a strict type system that is enforced at compile time. This includes static type polymorphism, which is monomorphized at compile time. Another concept that is supported are existential types, which are user defined types that have a polymorphic type parameter in one or more of their variants. This type can then be the polymorphic type of fields inside the variant, for example the type of a |List[T]| field. When matching on this variant, the field can then just be used and that polymorphic type is known inside the match arm, without the actual type definition needing to annotate or keep that polymorphic type in its signature.
+The Effekt language has a strict type system that is enforced at compile time. This includes static type polymorphism, which makes generic types possible, like |effect read[A](): A / stop|, which works for any type |A|. Another concept that is supported are existential types, which are user defined types that have a polymorphic type parameter in one or more of their variants. This type can then be the polymorphic type of fields inside the variant, for example the type of a |List[T]| field. When matching on this variant, the field can then just be used and that polymorphic type is known inside the match arm, without the actual type definition needing to annotate or keep that polymorphic type in its signature.
 
 This makes it possible, for example, to store (a reference to) an array with a generic type |T|, while not mentioning |T| in the signature of that variant's type. Therefore, values containing different types of arrays can be stored in a single collection of just the plain type values. Now a function could remove any index of any type by just needing to know the indices, but not mentioning the underlaying generic type (|T|). This is used in our game engine implemenation to make dynamic entities possible, as components can removed and changed without needing the related |Component[T]| effect handled using existential types. This is further elaborated in \Cref{sec:compimpl}.
 

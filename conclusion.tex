@@ -6,6 +6,8 @@ In general, we showed that effect systems can be very helpful for designing a ga
 
 Designing a compact, straightforward and ergonomic API is also possible with effects and handlers. We have shown that an API similar to established ECS libraries and game engines can be implemented with a few effect interfaces for the game developer. These contain simple effect operations to read and modify the world, define and use components and resources, as well as create queries and systems that can be registered to run every frame. For the API, lexical effect handlers, contextual effect polymorphism, bidirectional effects and named effect handlers were also some of the most important features to achieve this.
 
+With the Snake game as a case study, we have shown that the developed approach can be used to structure real games faster than implementing them standalone, while making them more easily expandable. The game engine can be used to make simple, but real, 2D games, while providing enough performance to play them comfortably. The API is based on the existing ECS architecture, while leveraging the Effekt language features.
+
 \section*{Potential Applications}
 
 The solution presented in this thesis can be used to develop simple 2D games with Effekt. This can be the basis for future work regarding game engines, entity component systems and the Effekt language. It can also serve as a benchmark for future improvements of the Effekt language in a relatively big, complicated and performance intensive environment.

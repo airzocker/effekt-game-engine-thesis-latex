@@ -1,3 +1,10 @@
-\chapter{\xxx{Using CoolThesisSoftware}}
+\chapter{Using the Game Engine and Playing the Snake Game}
 
-
+\begin{description}
+\item[1. Install Effekt] as described on their website\footnote{\url{https://effekt-lang.org/docs}}.
+\item[2. Clone] the Effekt 2D Game Engine repository\footnote{\url{https://github.com/airzocker/Effekt-Game-Engine-Thesis}}.
+\item[3. Compile] the included \textsf{main.effekt} file with the provided \textsf{build.sh} script for Linux (Mac and Windows should work with the same command written inside the \textsf{build.sh}, but replacing \textsf{effekt.sh} with \textsf{effekt}).
+\item[Or change the code] inside the \textsf{main.effekt} (it is configured to run the Snake game, using the engine, by default) and compile it
+\item[Or copy] the \verb^game_engine_lib^ folder into your own project and import the required modules with \verb^import game_engine_lib/<module>^, then compile your \textsf{main.effekt}
+\item[4. Open] the produced \verb^out/main.html^ file in your HTML5-capable browser
+\end{description}

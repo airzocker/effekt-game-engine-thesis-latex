@@ -1,17 +1,28 @@
 \chapter{Discussion}\label{chap:discussion}
 
-We found very little freely available research papers about ECS based game engines, that also have an actual implementation. This makes our contribution precious in this field, as it describes the concept and implementation of a working game engine using the ECS architecture and leveraging the Effekt language's features.
+We found very little freely available research papers about ECS based game engines, that also have an actual implementation. This makes our contribution unique in this field, as it describes the concept and implementation of a working game engine using the ECS architecture and leveraging the Effekt language's features.
 
 The idea to use the ECS architecture was not present from the start, but other solutions to a generic `world'/`scene' object management system seemed hard to implement in Effekt. Considering that, the ECS architecture seemed to fit our needs and was promising to implement using effects and handlers. We tried multiple architectures to organize the game engine and especially the ECS. The query API needed multiple iterations, as one reason for the previous system not working, was the lack of bidirectional effects in an operation mentioning its own effect. This is would be a kind of "recursive bidirectional effect" and is not (yet) supported in Effekt. The component effect also had multiple arrays at one point, stored in a map from archetype ID to component values. This allowed for sequential iteration of components, as every component of every archetype had its own array in the same order. This was more complicated to implement, though, and therefore was abandoned during a rework of the ECS.
 
 \section{Leveraging the Effekt Language}
 
-The Effekt language with its effect system provides many features required or useful for our game engine and API implementation.\\
-\textit{Bidirectional effects} are required for any effect that uses another effect at the call site of the operation. This includes the |EntityManager| effect with all its API effect operations, which need a |Component[T]| effect handled at the call site of the operation, as they are not yet available when creating the |World| and therefore handling the |EntityManager|. This is also required for the |Query| effect to add (optional) components to it.\\
-\textit{Executing handler code after resumption} is required to make deferred modification inside the systems possible, as these |systemEntityManager| operations need to register their modification after the |resume| call. Otherwise, systems could run endlessly if modifications were applied during iteration.
-\textit{Existential types} are required to make dynamic archetypes possible. Otherwise, there would be no way to add components without specifying all previous components in the set component function call type signature and no way to destroy entities without specifying all components of it in the destroy function call type signature. These components can only be destroyed by storing the typed component stores inside existential types that can remove values from it without needing its actual type signature from the outside.
-\textit{Named handlers} are required to have multiple |CompIter| handlers at the same time, which are needed to add multiple (optional) components to a query. They are later used during iteration of the query to get and set the current value of these (optional) components.
-\textit{Contextual effect polymorphism} is required to be able to use any local effect handler inside of systems, without the |System| effect knowing anything about what local effects/variables the actual system body uses.
+The Effekt language with its effect system provides many features required or useful for our game engine and API implementation.
+
+\begin{description}
+\item[Bidirectional effects] are required for any effect that uses another effect at the call site of the operation. This includes the |EntityManager| effect with all its API effect operations, which need a |Component[T]| effect handled at the call site of the operation, as they are not yet available when creating the |World| and therefore handling the |EntityManager|. This is also required for the |Query| effect to add (optional) components to it.
+\item[Executing handler code after resumption] is required to make deferred modification inside the systems possible, as these |systemEntityManager| operations need to register their modification after the |resume| call. Otherwise, systems could run endlessly if modifications were applied during iteration.
+\item[Existential types] are required to make dynamic archetypes possible. Otherwise, there would be no way to add components without specifying all previous components in the set component function call type signature and no way to destroy entities without specifying all components of it in the destroy function call type signature. These components can only be destroyed by storing the typed component stores inside existential types that can remove values from it without needing its actual type signature from the outside.
+\item[Named handlers] are required to have multiple |CompIter| handlers at the same time, which are needed to add multiple (optional) components to a query. They are later used during iteration of the query to get and set the current value of these (optional) components.
+\item[Contextual effect polymorphism] is required to be able to use any local effect handler inside of systems, without the |System| effect knowing anything about what local effects/variables the actual system body uses.
+\end{description}
+
+\section{Game Engines and ECS as Domain Specific Languages}
+
+Domain specific languages (DSLs) are languages designed for a specific domain, restricting semantics and syntax to the level needed for the specific domain, as opposed to general purpose programming languages~\cite{hudak1997domain}. Some examples for this are HTML and LaTex for document layout, SQL for databases and the OpenGL API for (3D) graphics.
+
+The domain of game engines is game development. As game engines are based on specific core systems, they have a specific architecture and therefore API for the user. This API of game engines can also be seen as a domain specific language. Especially for ECS based game engines, this architecture has a very specific way of defining the game world and its transformations.
+
+Having specialized semantics for entities, components, resources, systems, queries and the world makes it ideal to be defined as a domain specific language. The syntax of the implemented API together with the Effekt syntax then define the syntax of this DSL.
 
 \section{Restricting API Usage}
 
@@ -63,7 +74,7 @@ The first issue can be fixed as soon as a proper system for visibility/access re
 
 The initial plans for our query API was to specify the components and filters as generic types on query creation/handling and then iterate all the components via the query, not just the entity values themself. This turned out to not be feasible with the way the effect systems works. The current query API is quite verbose, including significant amounts of boilerplate code, but accomplishes the requirements in an easy-to-understand form. While easy to understand, the named handler syntax can need some getting used to.
 
-The queries in general also are not perfect yet, as they completely recalculate their matches before the next iteration whenever any structural change was made. This means adding a component to one single entity makes all queries recalculate for the next frame. The recalculation is compromised of checking all archetypes whether they include all required components but none of the `without' filter components and creating an array for these matching archetype indices. This very conservative approach can be improved in multiple ways, as mentioned in the Conclusion, under `Future work'.
+The current query implementation in general is also not perfect, as it needs to completely recalculate their matches before the next iteration whenever any structural change was made. This means adding a component to one single entity makes all queries recalculate for the next frame. The recalculation is compromised of checking all archetypes whether they include all required components but none of the `without' filter components and creating an array for these matching archetype indices. This very conservative approach can be improved in multiple ways, as mentioned in the Conclusion, under `Future work'.
 
 \section{Optimization and Indirect Component Access}\label{sec:indirectaccess}
 

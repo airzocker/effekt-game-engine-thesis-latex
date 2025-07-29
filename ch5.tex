@@ -2,7 +2,8 @@
 
 The first implementation started with a simple \textit{Pong} game that was then split and evolved into the actual game engine. After most of the engine was implemented, we developed a \textit{Snake} game with and without the engine to compare both versions. In this case study, we show the differences between both versions and how the engine makes game development simpler and better organized.
 
-\textit{Snake} is more of a genre than a single game. The first version that was for a single player with one snake that eats apples to grow larger was \textit{Snake Byte} written by Chuck Sommerville for the Apple II and published by Sirius Software in 1982. The player can control the next direction the head of the snake turns to, which moves on a grid. \textit{Snake Byte} was based on 28 levels, whereas our version, like many simple implementations, use just a single apple. For these single level implementations, one apple always exists in the world that adds one score when eating, while also increasing the snake's length by one grid unit. The game is over when the snake head runs into an outer wall or its own tail.\\
+\textit{Snake} is more of a genre than a single game. The first version that was for a single player with one snake that eats apples to grow larger was \textit{Snake Byte} written by Chuck Sommerville for the Apple II and published by Sirius Software in 1982. The player can control the next direction the head of the snake turns to, which moves on a grid. \textit{Snake Byte} was based on 28 levels, whereas our version, like many simple implementations, use just a single apple. For these single level implementations, one apple always exists in the world that adds one score when eating, while also increasing the snake's length by one grid unit. The game is over when the snake head runs into an outer wall or its own tail.
+
 Our version is based on this simple single level concept for the most part. A screenshot during the gameplay of this Snake implementation can be seen in \Cref{fig:snake}.
 
 \begin{figure}[h!]
@@ -88,9 +89,7 @@ val gameOverTextScale = 1.0 / 12.0;
 
 These constants are defined the same way in the standalone version, but all the game state is also defined as simple variables after the constants instead of implicitly inside the entities' components.
 
-From now on, the version with the game engine and the standalone version diverge much more, so we will just show the engine version first.
-
-In the game engine version, the initialization of the world is defined in a local function to be able to initialize it again when restarting after a game over. This function mainly initializes resources and creates entities with the right components, as seen in \Cref{fig:caseinit}.
+From now on, the version with the game engine and the standalone version diverge much more, so we will just show the engine version first. In that version, the initialization of the world is defined in a local function to be able to initialize it again when restarting after a game over. This function mainly initializes resources and creates entities with the right components, as seen in \Cref{fig:caseinit}.
 
 \begin{figure}[h!]
 \begin{lstlisting}
@@ -155,9 +154,7 @@ def gameOver() = {
 }
 \end{lstlisting}
 
-After this, all the game loop is just defined by adding systems to the world and then running it with |do runWorld()|. The |initGame| function is called once before |runWorld| and then after the Enter key is pressed while in the game over state, to restart the game.
-
-One system just updates resources and therefore does not need any queries, as seen in \Cref{fig:caseresources}.
+After this, all the game loop is just defined by adding systems to the world and then running it with |do runWorld()|. The |initGame| function encapsulates the initialization code of the game world and is called once before |runWorld| and then after the Enter key is pressed while in the game over state, to restart the game. After this, the actual systems are defined, one of which just updates resources and therefore does not need any queries, as seen in \Cref{fig:caseresources}.
 
 \begin{figure}[h!]
 \begin{lstlisting}
@@ -234,21 +231,177 @@ with system() {
 \label{fig:casemove}
 \end{figure}
 
-After these, there are systems added to update the tails based on their proceeding snake part, update the apple (find a new position), detect collisions with the head and update the score text. One system updates all the |LastPosition| components based on the |Position| components, except if a game over state occurred. In this case it resets the |Position| to the |LastPosition| value, so the snake does not actually run into the object it collided with, but stops before it.\\
-One last system queries \textit{all} entities, and it destroys them all when the Enter key is pressed during game over, which restarts the game, after which it calls the |initGame| function again.
+After these, there are systems added to update the tails based on their proceeding snake part, update the apple (find a new position), detect collisions with the head and update the score text. One system updates all the |LastPosition| components based on the |Position| components, except if a game over state occurred. In this case it resets the |Position| to the |LastPosition| value, so the snake does not actually run into the object it collided with, but stops before it. One last system queries \textit{all} entities, and it destroys them all when the Enter key is pressed during game over, which restarts the game, after which it calls the |initGame| function again.
 
 \section{Differences Without the Game Engine}
 
-The standalone version is only slightly longer (372 versus 339 lines of code), but that version lacks some features and needed copying of significant parts of the engine code, which would need to be implemented for every single game that is not using the game engine. This includes managing the whole canvas API, dealing with window properties, direct JavaScript key events for input and creating its own game loop.
+The standalone version is only slightly longer (372 versus 339 lines of code), but that version lacks some features and needed copying of significant parts of the engine code, which would need to be implemented for every single game that is not using the game engine. This includes managing the whole canvas API, dealing with window properties, direct JavaScript key events for input and creating its own game loop. The first missing feature is the ability to restart the game, which would need a more complicated implementation than just a query that destroys every entity and putting the initialization code, which is needed anyway, in a local function.
 
-The first missing feature is the ability to restart the game, which would need a more complicated implementation than just a query that destroys every entity and putting the initialization code, which is needed anyway, in a local function.\\
-Another feature difference is that the standalone version is always pinned to the top left corner of the available window area. The version with the game engine stays in the middle of the available window area instead of the top left, no matter if the height or width is the smaller side. This is simply a result from using the canvas renderer implementation, which uses a dynamic camera.\\
-The last, missing feature is drawing circles. This means the apple is not being drawn round, but as a square as well. Drawing a circle requires multiple lines of JavaScript code, so it would need an additional JavaScript implementation in addition to the |extern| function definition in Effekt.
+\begin{figure}[h!]
+\begin{lstlisting}
+def snakeWindowProperties(gridSize: Int, wallSize: Double)
+{ prog: => Unit / WindowProperties } = {
+  var width = 1;
+  var height = 1;
+  def smallerSide() = {
+    min(width, height)
+  }
+  def pixelsPerGrid() = {
+    smallerSide().toDouble() / (
+      gridSize.toDouble() + wallSize * 2.0
+    )
+  }
+  try {
+    prog();
+  } with WindowProperties {
+    def getWindowW() = {
+      resume(width)
+    }
+    def getWindowH() = {
+      resume(height)
+    }
+    def getSmallerSide() = {
+      resume(smallerSide())
+    }
+    def pixelsPerUnit() = {
+      resume(pixelsPerGrid())
+    }
+    def gameToWindow(x: Double, y: Double) = {
+      val ppu = pixelsPerGrid();
+      resume((
+        (x + wallSize + 0.5) * ppu,
+        height.toDouble() - ((y + wallSize + 0.5) * ppu)
+      ))
+    }
+    def updateWindowProperties() = {
+      width = jsGetCanvasWidth();
+      height = jsGetCanvasHeight();
+      resume(())
+    }
+  }
+}
+\end{lstlisting}
+\caption{Standalone Snake window properties handler. This is responsible for translating world-space to pixel-space and managing screen size and position dynamically.}
+\label{fig:casestandalonewindow}
+\end{figure}
 
-Other than having to copy many parts of the engine to make the standalone game work at all, the code differences include not having any vector |record|, because it would only be useful if some vector functions would be implemented along with the |record|, making the code much longer again. In the engine, vectors are implemented in the math module, including all basic math functions needed for game development. This means in the standalone version, all positions and directions are stored as separate values or variables for the X and Y value.\\
-The general structure of the game loop is also much different. It defines a function to create a new apple, as well es defining the whole game loop as a function. This first has to update the window properties to at least allow for dynamic resizing of the window and then updating the game time. Both of these are implemented automatically in the game engine. Then the head direction is updated directly, and collision checks are done. After that, the head and tail positions get updated, and the head position is compared against the apple to check if it has been eaten. After all the state updates, the drawing is implemented. This part can be completely left out for the version with the game engine, as the engine does all the rendering automatically. The standalone version has to first define a function to draw a full grid rectangle based on only a grid position to make it a little bit less verbose. Then the canvas has to be cleared manually and every square that has to be drawn needs its own function call with position, size and color.
+Another feature difference is that the standalone version is always pinned to the top left corner of the available window area. The version with the game engine stays in the middle of the available window area instead of the top left, no matter if the height or width is the smaller side. This is simply a result from using the canvas renderer implementation, which uses a dynamic camera. The standalone implementation, however, still needs to manage all of this manually, which is done with the |WindowProperties| interface and handler. The handler implementation can be seen in \Cref{fig:casestandalonewindow}.
+
+The last missing feature is drawing circles. This means the apple is not being drawn round, but as a square as well. Drawing a circle requires multiple lines of JavaScript code, so it would need an additional JavaScript implementation in addition to the |extern| function definition in Effekt.
+
+Other than having to copy many parts of the engine to make the standalone game work at all, the code differences include not having any vector |record|, because it would only be useful if some vector functions would be implemented along with the |record|, making the code much longer again. In the engine, vectors are implemented in the math module, including all basic math functions needed for game development. This means in the standalone version, all positions and directions are stored as separate values or variables for the X and Y value.
+
+\begin{figure}[h!]
+\begin{lstlisting}
+if (jsGetKey("ArrowUp") && lastMoveDirY == 0) {
+  headDirX = 0;
+  headDirY = 1;
+} else if (jsGetKey("ArrowDown") && lastMoveDirY == 0) {
+  headDirX = 0;
+  headDirY = -1;
+} else if (jsGetKey("ArrowRight") && lastMoveDirX == 0) {
+  headDirX = 1;
+  headDirY = 0;
+} else if (jsGetKey("ArrowLeft") && lastMoveDirX == 0) {
+  headDirX = -1;
+  headDirY = 0;
+}
+
+if (doMove) {
+  // Update head & tail positions
+  var nextTailPosX = headPosX;
+  var nextTailPosY = headPosY;
+  val newHeadX = headPosX + headDirX;
+  val newHeadY = headPosY + headDirY;
+  lastMoveDirX = headDirX;
+  lastMoveDirY = headDirY;
+  val newTailParts = tailParts.map() { tail =>
+    val posX = nextTailPosX;
+    val posY = nextTailPosY;
+    nextTailPosX = tail.first;
+    nextTailPosY = tail.second;
+    (posX, posY)
+  };
+}
+\end{lstlisting}
+\caption{Standalone Snake input handling and head and tail position updates.}
+\label{fig:casestandalonepos}
+\end{figure}
+
+The general structure of the standalone game loop is also much different. It defines a function to create a new apple, as well as defining the whole game loop as a function. This first has to update the window properties to at least allow for dynamic resizing of the window and then updating the game time. Both of these are implemented automatically in the game engine. Then the input is read, and the head direction set from the input directly. After that, the head and tail positions get updated, as seen in \Cref{fig:casestandalonepos}. At last, collision checks are done, and the head position is compared against the apple to check if it has been eaten.
+
+\begin{figure}[h!]
+\begin{lstlisting}
+def drawCube(x: Int, y: Int) = {
+  val pos = do gameToWindow(x.toDouble() - 0.5,
+    y.toDouble() + 0.5);
+  val ppu = do pixelsPerUnit();
+  jsFillRect(context, pos.first, pos.second, ppu, ppu);
+}
+
+jsClearCanvas(context);
+\end{lstlisting}
+\caption{Standalone Snake function to draw a cube and initialization.}
+\label{fig:casestandalonedrawinit}
+\end{figure}
+
+\begin{figure}[h!]
+\begin{lstlisting}
+// Walls
+val smallerSide = (do getSmallerSide()).toDouble();
+jsFillStyle(context, wallColor);
+jsFillRect(context, 0.0, 0.0, smallerSide, smallerSide);
+// Background
+val wallPixels = wallSize * do pixelsPerUnit();
+jsFillStyle(context, backgroundColor);
+jsFillRect(context, wallPixels, wallPixels,
+  smallerSide - wallPixels * 2.0,
+  smallerSide - wallPixels * 2.0);
+// Apple
+jsFillStyle(context, appleColor);
+drawCube(appleX, appleY);
+// Snake head
+jsFillStyle(context, headColor);
+drawCube(headPosX, headPosY);
+// Snake tails
+jsFillStyle(context, tailColor);
+tailParts.foreach() { tail =>
+  drawCube(tail.first, tail.second);
+};
+// Score
+jsFillStyle(context, textColor);
+if (gameOver) {
+  val gameOverPos = do gameToWindow(0.0 - gridOffset,
+    0.0 - gridOffset + gridSize.toDouble()
+    * gameOverTextScale);
+  val scorePos = do gameToWindow(0.0 - gridOffset,
+    0.0 - gridOffset - gridSize.toDouble()
+    * gameOverTextScale);
+  val fontSize = gridSize.toDouble()
+    * gameOverTextScale * do pixelsPerUnit();
+  jsInitFont(context, fontSize);
+  jsFillText(context, "GAME OVER",
+    gameOverPos.first, gameOverPos.second, fontSize);
+  jsFillText(context, "Score: " ++ score.show(),
+    scorePos.first, scorePos.second, fontSize);
+} else {
+  val scorePos = do gameToWindow(wallSize * 1.5 - 0.5,
+    (gridSize.toDouble() - 0.5) + 0.5 * wallSize);
+  val fontSize = (7.0 / 8.0)
+    * wallSize * do pixelsPerUnit();
+  jsInitFont(context, fontSize);
+  jsFillText(context, "Score: " ++ score.show(),
+    scorePos.first, scorePos.second, fontSize);
+}
+\end{lstlisting}
+\caption{Standalone Snake drawing code.}
+\label{fig:casestandalonedraw}
+\end{figure}
+
+After all the state updates, the drawing is implemented for the standalone version. This part can be completely left out for the version with the game engine, as the engine does all the rendering automatically. The standalone version has to first define a function to draw a full grid rectangle based on only a grid position to make it a little bit less verbose, as defined in \Cref{fig:casestandalonedrawinit}. Then the canvas has to be cleared manually and every square that has to be drawn needs its own function call with position, size and color. This can be seen in \Cref{fig:casestandalonedraw}.
 
 \section{Case Study Conclusion}
 
-Regarding this case study, we conclude that the game engine abstracts and automates many details that would need to be manually implemented for every game otherwise, often also resulting in a more limiting implementation. It also structures the game in a modular way using the ECS, which is easily extensible compared to a direct approach without a game engine.\\
-The size of implementation is not very different in this case, which for the most part is attributed to the ECS overhead. This is not very big, but the code size and modularity advantage would be much more obvious for a bigger and more modular game with many (dynamic) entities, as we discuss as well in the Conclusion under the Future Work section.
+Regarding this case study, we conclude that the game engine abstracts and automates many details that would need to be manually implemented for every game otherwise, often also resulting in a more limiting implementation. It also structures the game in a modular way using the ECS, which is easily extensible compared to a direct approach without a game engine.
+
+The size of implementation is not very different in this case, which for the most part is attributed to the ECS overhead. This overhead is not very big, but the code size and modularity advantage would be much more obvious for a bigger and more modular game with many (dynamic) entities, as we discuss as well in the Conclusion, under the Future Work section.

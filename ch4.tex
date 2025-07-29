@@ -1,4 +1,4 @@
-\chapter{Engine and ECS Implementation Details}\label{chap:details}
+\chapter{Using Effects and Handlers to Implement a Game Engine With ECS}\label{chap:details}
 
 In this chapter, we will go into more detail of how the ECS and game engine are implemented. This includes mostly relevant parts of effect signatures and explanations about the working principles of them.
 
@@ -131,7 +131,7 @@ def internalRemoveComponent(componentId, index) = {
 }
 \end{lstlisting}
 
-This principle of storing the component data in an existential type also allows setting a component value without the relevant |Component| effect in scope, which is used later for deferred modification in \Cref{sec:entitymanager}.
+This principle of storing the component data in an existential type also allows setting a component value without the relevant |Component| effect handled at the call site, which is used later for deferred modification in \Cref{sec:entitymanager}.
 
 \section{Archetypes and the ArchManager Effect}
 
@@ -161,7 +161,7 @@ interface ArchManager {
 }
 \end{lstlisting}
 
-The |ArchManager| effect acts as the bridge between the |EntityManager| and the actual component values. It has operations to check if a component type is present on a specific entity index, create and destroy entities indices, as well as remove a component from an entity index and add/set or get the value of a component. In its handler, a resizable array is created to hold all |Arch| values, each representing one archetype. Each of those has a map from a component id to a resizable array, which contain all the component indices for the specific component type. Each of these is for one of the entities belonging to this archetype, aligned with a parallel resizable array in the |Arch| containing the actual |Entity| values for iteration.
+The |ArchManager| effect acts as the bridge between the |EntityManager| and the actual component values. Its concept is importent to allow for better separation of modules that have different functions. It has operations to check if a component type is present on a specific entity index, create and destroy entities indices, as well as remove a component from an entity index and add/set or get the value of a component. In its handler, a resizable array is created to hold all |Arch| values, each representing one archetype. Each of those has a map from a component id to a resizable array, which contain all the component indices for the specific component type. Each of these is for one of the entities belonging to this archetype, aligned with a parallel resizable array in the |Arch| containing the actual |Entity| values for iteration.
 
 \section{EntityManager Effect and API}\label{sec:entitymanager}
 
@@ -232,6 +232,8 @@ interface CompIter[T] {
 To create a |Query|, the |query| function can be used to define a named handler for the |Query| effect. The |Query| itself can be iterated using the |foreach| operation, which iterates over the current |Entity| value. By calling the |withC| or |withoutC| effect operations on the named |Query| handler, additional filters can be added that do not get iterated themselves. Using the |addC| or |addOptC| effect operations, named handlers of the |CompIter| effect for the respective component can be defined. These can then be used during |Query| iteration to |get| and |set| the specific component value of that type of the current entity, with the respective effect operations.
 
 The |Query| effect also heavily uses bidirectional effects, as the specific |Component[T]| effect must be available at the call site when adding (optional) components or filters to the query.
+
+They way it currently is laid out, creating additional named handlers for any components that are needed in the query, is the result of multiple iterations. After a rework of the ECS, the idea was to pack all of the component types that get queried inside the single |Query| effect. This would allow adding to the query without creating named handlers and iterating over the components themselves later, instead of just the Entities and getting/setting the components via the named handler. This approach, however, did not work as intended. That is mainly because of the current lack of "recursive bidirectional effects", which is requiring the effect itself inside an effect operation as a bidirectional effect. This means, calling the effect operation of a named handler would need another handler of the same effect in scope at the call site, which is currently not possible. After trying different concepts for the query implementation, this is the one that worked and was relatively ergonomic to use.
 
 \section{World Effect and Frame Execution Schedule}
 
